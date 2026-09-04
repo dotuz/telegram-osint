@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.4.0] - 2026-09-04 — Phase 4: Public Telegram intelligence
+
+### Added
+- `collectors/common/` — `Collector` base class (`collect → normalize → validate
+  → health_check`, orchestrated by `run()` which never raises), DTOs
+  (`CollectRequest`, `RawBundle`, `NormalizedRecord`, `EvidenceDraft`,
+  `RelationshipDraft`, `CollectResult`, `HealthStatus`), and `CollectorRegistry`.
+- `collectors/telegram/` — swappable `TelegramSource` protocol
+  (`Null`/`Fake`/`BotApi`/`Operator` sources; `build_source()` picks the best
+  available) + `TelegramPublicCollector` for kinds `telegram_user`,
+  `telegram_group`, `telegram_channel`, `telegram_message_search`. Extracts URLs
+  and @mentions from message text. Honest about Bot API limits (empty + a note,
+  never fabricated).
+- `intelligence/ingest.py` — `IngestionService`: STORE step. Upserts entities via
+  the deduplicating repositories, appends immutable evidence, observes graph
+  edges; one bad record never sinks the batch.
+- `intelligence/search.py` — `TelegramIntelService`: `search_user`, `group_intel`,
+  `channel_intel`, `search_messages`, `history`. Creates per-user `Search` /
+  `SearchResult` rows; degrades to the DB when the source is unavailable.
+- Bot: `/search`, `/user`, `/group`, `/channel`, `/message`, `/history` are live
+  (inline collection with a typing indicator; Phase 8 moves to jobs). `/help` no
+  longer tags them "pending" (`router.CURRENT_PHASE = 4`).
+- API: `POST /api/v1/telegram/{user,group,channel,messages}`, `GET
+  /api/v1/searches`, `GET /api/v1/sources/health`. Dev-only `current_user` shim
+  (`X-User-Email` header) until Phase 11/12 auth.
+- 34 new tests (120 total): collector interface + Telegram collector, ingestion
+  dedup/linking/partial-failure, intel service, bot handlers, API endpoints
+  (incl. per-user isolation). Fully offline via `FakeTelegramSource`.
+
+### Changed
+- `apps/bot/auth.py` re-exports `Role` from `database.types` (single enum).
+- Telegram entity dedup now resolves by `telegram_id` OR normalized username and
+  backfills the missing key.
+
 ## [0.3.0] - 2026-09-04 — Phase 3: Database
 
 ### Added

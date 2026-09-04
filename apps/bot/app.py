@@ -18,7 +18,7 @@ from telegram.ext import (
 
 from apps.bot.auth import warn_if_open_or_closed
 from apps.bot.errors import on_error
-from apps.bot.handlers import admin, common
+from apps.bot.handlers import admin, common, telegram_intel
 from apps.bot.handlers.stubs import make_stub_handler
 from apps.bot.router import ALL_COMMANDS, public_command_menu
 from security.config import Settings, get_settings
@@ -33,6 +33,13 @@ _LIVE_HANDLERS = {
     "whoami": common.whoami,
     "admin": admin.admin_overview,
     "health": admin.health_cmd,
+    # Phase 4: public Telegram intelligence
+    "search": telegram_intel.search_user,
+    "user": telegram_intel.user_alias,
+    "group": telegram_intel.group_intel,
+    "channel": telegram_intel.channel_intel,
+    "message": telegram_intel.message_search,
+    "history": telegram_intel.history,
 }
 
 

@@ -110,25 +110,54 @@ class IOCRepository(BaseRepository[IOC]):
         return ioc, created
 
 
+def _resolve_telegram_entity(repo, telegram_id, username, fields):  # noqa: ANN001, ANN202
+    """Dedup a Telegram account/group/channel by ``telegram_id`` OR normalized
+    ``username`` -- whichever matches an existing row -- and backfill the other
+    key when it was previously unknown.
+    """
+    from sqlalchemy import select
+
+    norm_username = normalize_username(username) if username else None
+    model = repo.model
+    session = repo.session
+
+    obj = None
+    if telegram_id is not None:
+        obj = session.execute(
+            select(model).where(model.telegram_id == telegram_id)
+        ).scalar_one_or_none()
+    if obj is None and norm_username is not None:
+        obj = session.execute(
+            select(model).where(model.username_normalized == norm_username)
+        ).scalar_one_or_none()
+
+    if obj is not None:
+        if telegram_id is not None and obj.telegram_id is None:
+            obj.telegram_id = telegram_id
+        if norm_username is not None and obj.username_normalized is None:
+            obj.username = username
+            obj.username_normalized = norm_username
+        return obj, False
+
+    if telegram_id is None and norm_username is None:
+        raise ValueError("telegram_id or username is required")
+
+    defaults = {"username": username, "username_normalized": norm_username, **fields}
+    if telegram_id is not None:
+        return repo._get_or_create(telegram_id=telegram_id, defaults=defaults)
+    return repo._get_or_create(
+        username_normalized=norm_username,
+        defaults={k: v for k, v in defaults.items() if k != "username_normalized"},
+    )
+
+
 class TelegramAccountRepository(BaseRepository[TelegramAccount]):
     model = TelegramAccount
 
     def get_or_create(
         self, *, telegram_id: int | None = None, username: str | None = None, **fields: object
     ) -> tuple[TelegramAccount, bool]:
-        norm_username = normalize_username(username) if username else None
-        if telegram_id is not None:
-            return self._get_or_create(
-                telegram_id=telegram_id,
-                defaults={"username": username, "username_normalized": norm_username, **fields},
-            )
-        if norm_username is not None:
-            return self._get_or_create(
-                username_normalized=norm_username,
-                telegram_id=None,
-                defaults={"username": username, **fields},
-            )
-        raise ValueError("telegram_id or username is required")
+        return _resolve_telegram_entity(self, telegram_id, username, fields)
 
 
 class TelegramGroupRepository(BaseRepository[TelegramGroup]):
@@ -137,7 +166,7 @@ class TelegramGroupRepository(BaseRepository[TelegramGroup]):
     def get_or_create(
         self, *, telegram_id: int | None = None, username: str | None = None, **fields: object
     ) -> tuple[TelegramGroup, bool]:
-        return _tg_container_get_or_create(self, telegram_id, username, fields)
+        return _resolve_telegram_entity(self, telegram_id, username, fields)
 
 
 class TelegramChannelRepository(BaseRepository[TelegramChannel]):
@@ -146,23 +175,7 @@ class TelegramChannelRepository(BaseRepository[TelegramChannel]):
     def get_or_create(
         self, *, telegram_id: int | None = None, username: str | None = None, **fields: object
     ) -> tuple[TelegramChannel, bool]:
-        return _tg_container_get_or_create(self, telegram_id, username, fields)
-
-
-def _tg_container_get_or_create(repo, telegram_id, username, fields):  # noqa: ANN001, ANN202
-    norm_username = normalize_username(username) if username else None
-    if telegram_id is not None:
-        return repo._get_or_create(
-            telegram_id=telegram_id,
-            defaults={"username": username, "username_normalized": norm_username, **fields},
-        )
-    if norm_username is not None:
-        return repo._get_or_create(
-            username_normalized=norm_username,
-            telegram_id=None,
-            defaults={"username": username, **fields},
-        )
-    raise ValueError("telegram_id or username is required")
+        return _resolve_telegram_entity(self, telegram_id, username, fields)
 
 
 def _normalize_ioc(ioc_type: str, value: str) -> str:

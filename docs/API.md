@@ -21,12 +21,30 @@ Readiness. Checks database + Redis. `200` when all healthy, `503` otherwise.
 { "ready": false, "checks": { "database": "ok", "redis": "error" } }
 ```
 
+## Phase 4 surface (`/api/v1`)
+
+Auth is a **dev shim** until Phase 11/12: the caller is identified by the
+`X-User-Email` header (default `analyst@local`); a user row is created on first
+use and every search/result is scoped to it.
+
+| Method | Path | Body | Returns |
+|--------|------|------|---------|
+| POST | `/api/v1/telegram/user` | `{query}` | `IntelResponse` (public profile summary + evidence count) |
+| POST | `/api/v1/telegram/group` | `{query}` | `IntelResponse` |
+| POST | `/api/v1/telegram/channel` | `{query}` | `IntelResponse` |
+| POST | `/api/v1/telegram/messages` | `{query, limit}` | `IntelResponse` with `items[]` |
+| GET | `/api/v1/searches` | — | `{searches: [...]}` (this user's history) |
+| GET | `/api/v1/sources/health` | — | `{sources: [{name, healthy, detail}]}` |
+
+`IntelResponse`: `{kind, found, entity_type, entity_id, summary, items, notes,
+search_id, source_available}`. When no Telegram source is configured,
+`source_available=false` and results come only from the collected corpus.
+
 ## Planned surface
 
 | Phase | Endpoints (sketch) |
 |------:|--------------------|
 | 11 | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` |
-| 4 | `POST /search`, `GET /targets`, `GET /targets/{id}`, `GET /messages` |
 | 6 | `POST /username-osint`, `GET /sources`, `GET /sources/health` |
 | 7 | `GET /targets/{id}/graph`, `GET /targets/{id}/timeline` |
 | 8 | `GET /jobs`, `GET /jobs/{id}`, `POST /jobs/{id}/cancel` |

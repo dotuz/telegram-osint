@@ -5,26 +5,44 @@ validated records plus **evidence**. Collectors are independent of the
 intelligence engine and of the database schema — the worker persists their
 output.
 
-## Interface (`collectors/common`, finalised in Phase 6)
+## Interface (`collectors/common/interfaces.py` — implemented in Phase 4)
 
 ```python
-class Collector(Protocol):
-    name: str  # stable slug, e.g. "github", "telegram_public"
-    source_type: str  # "telegram" | "external_account" | "web" | ...
+class Collector(abc.ABC):
+    name: str                      # stable slug, e.g. "telegram_public"
+    source_type: str               # SourceType value
+    supported_kinds: frozenset[str]
 
-    async def collect(self, request: CollectRequest) -> CollectResult:
-        """Fetch raw data for the request. Network-bound. Must respect timeouts,
-        rate limits, and the SSRF guard for any URL fetch."""
+    async def collect(self, request: CollectRequest) -> RawBundle:      # network-bound
+    def normalize(self, raw: RawBundle) -> list[NormalizedRecord]:      # pure
+    def relationships(self, raw, records) -> list[RelationshipDraft]:   # pure, optional
+    def validate(self, records) -> list[NormalizedRecord]:             # pure; dedups, drops empty keys
+    async def health_check(self) -> HealthStatus
 
-    def normalize(self, raw: RawRecords) -> list[NormalizedRecord]:
-        """Pure function: raw payload -> canonical records. No I/O."""
-
-    def validate(self, records: list[NormalizedRecord]) -> list[NormalizedRecord]:
-        """Drop/flag malformed or implausible records. No I/O."""
-
-    async def health_check(self) -> HealthStatus:
-        """Is the source reachable / are credentials valid? For /sources/health."""
+    async def run(self, request) -> CollectResult   # orchestrates the above; never raises
 ```
+
+`run()` is what callers use: unsupported kind → `ok=False`; any exception in
+`collect` → `ok=False` with the message; otherwise `normalize`+`validate`+
+`relationships`. Collectors return **DTOs + evidence drafts only** — the
+`IngestionService` (`intelligence/ingest.py`) persists them.
+
+### DTOs
+
+| DTO | Purpose |
+|-----|---------|
+| `CollectRequest` | `query`, `kind`, `limit`, `since`, `options` |
+| `RawBundle` | opaque payload from `collect` → `normalize` (`payload`, `error`, `notes`, `partial`) |
+| `NormalizedRecord` | `ref` (local id), `entity_type`, `natural_key` (dedup), `attributes`, `evidence` |
+| `EvidenceDraft` | `ref`, `field`, `value`, `source`, `reference`, `observed_at`, `confidence`, `raw` |
+| `RelationshipDraft` | `source_ref`, `target_ref`, `rel_type`, `confidence` |
+| `CollectResult` | `ok`, `records`, `relationships`, `partial`, `error`, `notes` |
+
+### Registry
+
+`collectors/common/registry.py` — `registry.register(collector)`;
+`registry.for_kind(kind)`; `await registry.health()`. Built-ins are registered by
+`collectors/bootstrap.py::register_default_collectors()` at process start.
 
 ### Every result record carries
 
@@ -53,16 +71,28 @@ collection; changes create a new observation.
 
 | Slug | Source | Phase | Auth |
 |------|--------|------:|------|
-| `telegram_public` | Public Telegram (Bot API + optional operator acct) | 4 | bot token / operator |
+| `telegram_public` | Public Telegram (Bot API + optional operator acct) | 4 ✅ | bot token / operator |
 | `github` | GitHub public profiles, repos, gists | 6 | optional `GITHUB_TOKEN` |
 | `reddit` | Reddit public posts/comments | 6 | optional app creds |
 | `web` | Generic public web pages | 6 | none |
 | `username_x`, `username_instagram`, `username_youtube`, `username_tiktok` | Public presence checks | 6+ | none / optional |
 
+### Telegram sources (`collectors/telegram/source.py`)
+
+The collector depends only on the `TelegramSource` protocol, so it is fully
+testable offline:
+
+| Source | Coverage | When used |
+|--------|----------|-----------|
+| `OperatorTelegramSource` | best (history, search) | `TELEGRAM_OPERATOR_*` set + library installed (not yet wired) |
+| `BotApiTelegramSource` | public chat metadata only | `TELEGRAM_BOT_TOKEN` set |
+| `NullTelegramSource` | none | nothing configured |
+| `FakeTelegramSource` | seeded in-memory | tests / local demos |
+
 ## Adding a source
 
 1. Create `collectors/<slug>/` with a class implementing `Collector`.
-2. Register it in the adapter registry (Phase 6) — no core-engine changes.
-3. Add unit tests: `normalize` and `validate` with fixture payloads; a mocked
-   `collect`; a `health_check` test.
-4. Document it in the table above.
+2. Register it in `collectors/bootstrap.py` — no core-engine changes.
+3. Add unit tests: `normalize`/`validate` with fixture payloads; a fake data
+   source; a `health_check` test.
+4. Document it in the tables above.

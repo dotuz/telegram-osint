@@ -43,9 +43,9 @@ surface is complete and discoverable without fabricating functionality.
 | `/whoami` | 2 ✅ | Your Telegram id + role |
 | `/admin` | 2 ✅ | Admin overview (admin only) |
 | `/health` | 2 ✅ | DB + Redis checks (admin only) |
-| `/search` `/user` | 4 | Public Telegram user search |
-| `/group` `/channel` `/message` | 4 | Public Telegram intelligence |
-| `/history` | 4 | Recent searches/reports |
+| `/search` `/user` | 4 ✅ | Public Telegram user search (via `TelegramIntelService`) |
+| `/group` `/channel` `/message` | 4 ✅ | Public Telegram intelligence |
+| `/history` | 4 ✅ | Recent searches |
 | `/username` | 6 | Username OSINT across public sources |
 | `/jobs` `/stats` | 8 | (admin) job + usage views |
 | `/watch` `/unwatch` | 9 | Watchlist |

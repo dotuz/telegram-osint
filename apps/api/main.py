@@ -12,7 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.middleware import RequestContextMiddleware
-from apps.api.routers import health
+from apps.api.routers import health, intel
+from collectors.bootstrap import register_default_collectors
 from security.config import Settings, get_settings
 from security.logging import configure_logging, get_logger
 
@@ -23,6 +24,7 @@ async def _lifespan(app: FastAPI):
     configure_logging(level=settings.log_level, json_output=settings.log_json)
     log = get_logger("api")
     settings.require_production_secrets()
+    register_default_collectors()
     log.info("api_startup", env=settings.app_env, debug=settings.app_debug)
     yield
     log.info("api_shutdown")
@@ -54,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
 
     app.include_router(health.router)
+    app.include_router(intel.router, prefix="/api/v1")
 
     return app
 

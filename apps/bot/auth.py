@@ -11,19 +11,15 @@ re-check authorization server-side for every resource (Phase 12).
 
 from __future__ import annotations
 
-import enum
 from dataclasses import dataclass
 
+from database.types import Role
 from security.config import Settings, get_settings
 from security.logging import get_logger
 
 _log = get_logger("bot.auth")
 
-
-class Role(enum.StrEnum):
-    USER = "USER"
-    ANALYST = "ANALYST"
-    ADMIN = "ADMIN"
+__all__ = ["AccessDenied", "Principal", "Role", "require_admin", "resolve_principal"]
 
 
 @dataclass(frozen=True)

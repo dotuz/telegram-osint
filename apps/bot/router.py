@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+#: Bump this as phases ship. A command is "live" once its phase has landed.
+CURRENT_PHASE = 4
+
 
 @dataclass(frozen=True)
 class CommandSpec:
@@ -16,14 +19,14 @@ class CommandSpec:
     summary: str
     usage: str
     admin: bool = False
-    # Build phase at which this command becomes functional. <= 2 means "live now".
+    # Build phase at which this command becomes functional.
     phase: int = 2
     # Long-running commands enqueue a background job instead of blocking (Phase 8).
     long_running: bool = False
 
     @property
     def live(self) -> bool:
-        return self.phase <= 2
+        return self.phase <= CURRENT_PHASE
 
 
 USER_COMMANDS: tuple[CommandSpec, ...] = (
