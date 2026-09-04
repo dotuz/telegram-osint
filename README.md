@@ -18,8 +18,8 @@ Telegram information and other **public** OSINT sources.
 | Phase | Scope | State |
 |------:|-------|-------|
 | 1 | Foundation: config, logging, DB + migrations, tests, CI, Docker | ✅ done |
-| 2 | Telegram bot: `/start`, `/help`, menu, router, error handling | ⛏ next |
-| 3 | Database: full domain models, repositories, indexes | ☐ |
+| 2 | Telegram bot: `/start`, `/help`, menu, router, auth, error handling | ✅ done |
+| 3 | Database: full domain models, repositories, indexes | ⛏ next |
 | 4 | Public Telegram intelligence (user/group/channel/message search) | ☐ |
 | 5 | IOC extraction | ☐ |
 | 6 | Username OSINT + source-adapter architecture | ☐ |
@@ -102,3 +102,4 @@ docs/            ARCHITECTURE SECURITY THREAT_MODEL DATABASE API DEPLOYMENT DEVE
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) — production deployment, secrets, scaling
 - [API.md](docs/API.md) — HTTP API surface
 - [COLLECTORS.md](docs/COLLECTORS.md) — the collector interface and how to add a source
+- [BOT.md](docs/BOT.md) — Telegram bot setup, commands, authorization model

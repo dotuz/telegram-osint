@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,7 +28,7 @@ _FORBIDDEN_KEYS = {
 }
 
 
-def _scrub(metadata: dict[str, object] | None) -> str | None:
+def _scrub(metadata: Mapping[str, object] | None) -> str | None:
     if not metadata:
         return None
     cleaned = {
@@ -49,7 +49,7 @@ class AuditRepository:
         resource: str | None = None,
         result: str = "success",
         ip_metadata: str | None = None,
-        metadata: dict[str, object] | None = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> AuditLog:
         entry = AuditLog(
             actor=actor,

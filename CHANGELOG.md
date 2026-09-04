@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.2.0] - 2026-09-04 — Phase 2: Telegram bot
+
+### Added
+- `apps/bot/` — Telegram bot on `python-telegram-bot` v22:
+  - `auth.py` — allow-list authorization; `ADMIN` / `ANALYST` roles;
+    secure-by-default (empty allow-list denies everyone).
+  - `router.py` — single command registry (name, summary, usage, admin flag,
+    build phase, long-running flag); drives handler registration, the Telegram
+    command menu, and `/help`.
+  - `views.py` + `responses.py` + `keyboards.py` — pure, `telegram`-free view
+    layer returning `BotMessage`; inline main menu per spec.
+  - `guard.py` — `@authorized` decorator: denial → generic message + audit;
+    handler exceptions → generic message + full log (never a stack trace).
+  - `adapter.py` — the only send-path touching `telegram.*`; edits in place for
+    callback queries.
+  - `handlers/` — live: `/start`, `/help`, `/whoami`, `/admin`, `/health`,
+    `menu:*` callbacks, unknown-command fallback; stub factory for
+    not-yet-shipped commands.
+  - `errors.py` — global error handler.
+  - `app.py` — `build_application()` (import-safe, no network) + `run()` polling.
+- `apps/bot/audit.py` — best-effort audit logging (never breaks a handler).
+- `docs/BOT.md`.
+- 28 new tests (unit + integration), fully offline (mock updates, no Telegram).
+
+### Changed
+- `AuditRepository.record` / bot audit accept `Mapping[str, object]` metadata.
+
 ## [0.1.0] - 2026-09-04 — Phase 1: Foundation
 
 ### Added
