@@ -87,6 +87,26 @@ class Collector(Protocol):
 | Worker | `entrypoint.sh worker` | Job execution: collect → normalize → validate → store → correlate |
 | Migrate | `entrypoint.sh migrate` | `alembic upgrade head`, then exit |
 
+## IOC intelligence (Phase 5)
+
+`intelligence/ioc/` is a `NORMALIZE → STORE → CORRELATE` step, not a collector:
+
+```
+stored public message text
+        │  extract_iocs()  (pure, defang-aware, overlap-resolved, deduped)
+        ▼
+IocEnricher (runs inside IngestionService, and standalone for re-processing)
+        ├── IOC row (get_or_create, normalized)            ── dedup
+        ├── typed entity  Domain / URL / IP  (+ IOC.linked_entity_*)
+        ├── Evidence  { entity=IOC, source=message, reference, raw=±60-char snippet }  ── immutable
+        └── Relationship  MESSAGE_CONTAINS_{IOC,DOMAIN,IP,URL} / MESSAGE_MENTIONS_USERNAME
+```
+
+Bios/descriptions get a lighter pass (`enrich_entity_text`) →
+`ACCOUNT_LINKED_TO_WEBSITE` / `DOMAIN_REFERENCED_BY_ACCOUNT`. Reads go through
+`IocService` (per message, per container, recent). Every IOC keeps its evidence;
+nothing is inferred without a source reference.
+
 ## Phase 1 implementation notes
 
 - `security/config.py` — single typed settings source (`pydantic-settings`),

@@ -52,9 +52,9 @@ async def test_ingest_channel_links_messages_to_container(db_session, collector)
     assert len(msgs) == 2
     assert {m.source_id for m in msgs} == {chan.id}
 
-    rels = db_session.query(Relationship).all()
-    assert len(rels) == 2
-    assert all(r.rel_type == "MESSAGE_IN_CHANNEL" for r in rels)
+    in_channel = db_session.query(Relationship).filter_by(rel_type="MESSAGE_IN_CHANNEL").all()
+    assert len(in_channel) == 2
+    assert {r.source_type for r in in_channel} == {"message"}
 
 
 async def test_partial_batch_survives_one_bad_record(db_session, collector):

@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.5.0] - 2026-09-04 — Phase 5: IOC intelligence
+
+### Added
+- `intelligence/ioc/extract.py` — pure IOC extraction from public text: URLs,
+  Telegram URLs, emails, IPv4/IPv6 (validated), domains, MD5/SHA1/SHA256
+  (length-anchored), CVE, `@` handles. Re-fangs `hxxp` / `[.]` / `(dot)` /
+  `[at]` first; resolves URL↔domain and email↔domain overlaps; drops filename
+  "domains" (`report.pdf`); de-duplicates. Safe on untrusted content (data, not code).
+- `intelligence/ioc/enrich.py` — `IocEnricher`: turns matches into `IOC` rows
+  (+ typed `Domain`/`URL`/`IP` entities, `linked_entity_*` backfill), immutable
+  `Evidence` referencing the source message, and `MESSAGE_CONTAINS_{IOC,DOMAIN,IP,
+  URL}` / `MESSAGE_MENTIONS_USERNAME` edges. Also `enrich_entity_text` for
+  bios/descriptions → `ACCOUNT_LINKED_TO_WEBSITE` / `DOMAIN_REFERENCED_BY_ACCOUNT`.
+  Per-IOC failure is isolated; fully idempotent.
+- `intelligence/ioc/service.py` — `IocService`: `for_message`, `for_container`
+  (aggregates across a channel/group, resolves typed targets back to their IOC),
+  `recent` with type filter.
+- Wired into `IngestionService`: every stored public message is enriched
+  automatically (`IngestSummary.iocs_extracted`).
+- Surfacing: channel/group summaries carry `ioc_count`; message-search items
+  carry `iocs`; bot message hits show an `IOC:` line; `GET /api/v1/iocs`
+  (`?message_id` / `?entity_type&entity_id` / `?ioc_type` / recent).
+- 24 new tests (144 total): extraction (types, defang, overlaps, negatives),
+  enrichment (entities/edges/evidence, immutability, idempotency, bio links),
+  service + API.
+
 ## [0.4.0] - 2026-09-04 — Phase 4: Public Telegram intelligence
 
 ### Added

@@ -27,6 +27,7 @@ from database.normalize import normalize_username
 from database.repositories import EvidenceRepository, MessageRepository, SearchRepository
 from database.types import EntityType, SearchKind, TargetKind, TaskStatus
 from intelligence.ingest import IngestionService
+from intelligence.ioc.service import IocService
 from security.logging import get_logger
 
 _log = get_logger("intelligence.search")
@@ -183,16 +184,18 @@ class TelegramIntelService:
                 base[attr] = getattr(obj, attr)
         base = {k: v for k, v in base.items() if v is not None}
 
-        # Public presence: how many messages we've observed for a chat.
+        # Public presence: how many messages we've observed for a chat + IOC count.
         if etype in (EntityType.TELEGRAM_GROUP.value, EntityType.TELEGRAM_CHANNEL.value):
             base["observed_messages"] = len(
                 MessageRepository(self.session).for_source(etype, entity_id, limit=1000)
             )
+            base["ioc_count"] = len(IocService(self.session).for_container(etype, entity_id))
         base["evidence_count"] = len(ev_repo.for_entity(etype, entity_id))
         return base
 
     def _fill_message_search(self, query: str, limit: int, out: IntelResult) -> None:
         rows = MessageRepository(self.session).search_text(query, limit=limit)
+        ioc_svc = IocService(self.session)
         out.items = [
             {
                 "entity_type": EntityType.MESSAGE.value,
@@ -202,6 +205,10 @@ class TelegramIntelService:
                 "author_username": m.author_username,
                 "posted_at": m.posted_at.isoformat() if m.posted_at else None,
                 "source_url": m.source_url,
+                "iocs": [
+                    {"ioc_type": i["ioc_type"], "value": i["value"]}
+                    for i in ioc_svc.for_message(m.id)
+                ],
             }
             for m in rows
         ]

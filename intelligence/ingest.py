@@ -34,6 +34,7 @@ from database.repositories import (
     UsernameRepository,
 )
 from database.types import EntityType
+from intelligence.ioc.enrich import IocEnricher
 from security.logging import get_logger
 
 _log = get_logger("intelligence.ingest")
@@ -50,6 +51,7 @@ class IngestSummary:
     entities_updated: int = 0
     evidence_recorded: int = 0
     relationships_observed: int = 0
+    iocs_extracted: int = 0
     # ref -> (entity_type, entity_id)
     resolved: dict[str, tuple[str, str]] = field(default_factory=dict)
     skipped: list[str] = field(default_factory=list)
@@ -106,6 +108,32 @@ class IngestionService:
             summary.entities_created += 1
         else:
             summary.entities_updated += 1
+
+        # Link domains / websites mentioned in a public bio or description.
+        for field_name in ("bio", "description"):
+            blurb = rec.attributes.get(field_name)
+            if (
+                isinstance(blurb, str)
+                and blurb
+                and rec.entity_type
+                in (
+                    EntityType.TELEGRAM_ACCOUNT.value,
+                    EntityType.TELEGRAM_CHANNEL.value,
+                    EntityType.TELEGRAM_GROUP.value,
+                )
+            ):
+                es = IocEnricher(self.session).enrich_entity_text(
+                    entity_type=rec.entity_type,
+                    entity_id=obj.id,
+                    text=blurb,
+                    source=(rec.evidence[0].source if rec.evidence else "manual"),
+                    source_type=(rec.evidence[0].source_type if rec.evidence else "telegram"),
+                    reference=_str_or_none(rec.attributes.get("reference")),
+                    field_name=field_name,
+                )
+                summary.iocs_extracted += es.iocs_created
+                summary.relationships_observed += es.relationships_observed
+                summary.evidence_recorded += es.evidence_recorded
 
     def _dispatch_get_or_create(self, rec: NormalizedRecord):  # noqa: ANN202
         nk = rec.natural_key
@@ -192,6 +220,22 @@ class IngestionService:
         summary.entities_created += int(created)
         summary.entities_updated += int(not created)
 
+        # IOC enrichment (Phase 5): extract indicators from the message text and
+        # wire them into the graph with evidence. Idempotent.
+        text = rec.attributes.get("text")
+        if isinstance(text, str) and text:
+            enrich = IocEnricher(self.session).enrich_message(
+                message_id=msg.id,
+                text=text,
+                source=(rec.evidence[0].source if rec.evidence else "manual"),
+                source_type=(rec.evidence[0].source_type if rec.evidence else "telegram"),
+                reference=_str_or_none(rec.attributes.get("source_url")),
+                observed_at=rec.evidence[0].observed_at if rec.evidence else None,
+            )
+            summary.iocs_extracted += enrich.iocs_created
+            summary.relationships_observed += enrich.relationships_observed
+            summary.evidence_recorded += enrich.evidence_recorded
+
     def _apply_attributes(self, obj: object, attributes: Mapping[str, object]) -> None:
         for key, value in attributes.items():
             if key in _HINT_KEYS or key in _SKIP_ATTR or value is None:
@@ -241,6 +285,10 @@ class IngestionService:
             summary.relationships_observed += int(created)
         except Exception as exc:  # noqa: BLE001
             _log.warning("ingest_relationship_failed", error=str(exc))
+
+
+def _str_or_none(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
 
 
 def _username_from_nk(nk: Mapping[str, object]) -> str | None:

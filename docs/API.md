@@ -35,6 +35,7 @@ use and every search/result is scoped to it.
 | POST | `/api/v1/telegram/messages` | `{query, limit}` | `IntelResponse` with `items[]` |
 | GET | `/api/v1/searches` | — | `{searches: [...]}` (this user's history) |
 | GET | `/api/v1/sources/health` | — | `{sources: [{name, healthy, detail}]}` |
+| GET | `/api/v1/iocs` | `?message_id` \| `?entity_type&entity_id` \| `?ioc_type` \| (recent) | `{iocs: [{id, ioc_type, value, times_observed, linked_entity_*, evidence_count}]}` |
 
 `IntelResponse`: `{kind, found, entity_type, entity_id, summary, items, notes,
 search_id, source_available}`. When no Telegram source is configured,

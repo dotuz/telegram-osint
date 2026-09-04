@@ -108,6 +108,7 @@ def render_chat_intel(
             ("description", "Description"),
             ("participants_count", "Members"),
             ("observed_messages", "Public messages collected"),
+            ("ioc_count", "IOCs extracted"),
             ("evidence_count", "Evidence items"),
         ],
     )
@@ -140,6 +141,11 @@ def render_message_hits(
         lines.append(f"{prefix}{text}")
         if meta:
             lines.append(f"   _{' · '.join(meta)}_")
+        iocs = m.get("iocs")
+        if isinstance(iocs, list) and iocs:
+            shown_iocs = ", ".join(f"{d['ioc_type']}:{d['value']}" for d in iocs[:5])
+            more = f" (+{len(iocs) - 5})" if len(iocs) > 5 else ""
+            lines.append(f"   IOC: {shown_iocs}{more}")
         if m.get("source_url"):
             lines.append(f"   {m['source_url']}")
     if total > _MAX_ITEMS:

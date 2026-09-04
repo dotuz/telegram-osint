@@ -21,8 +21,8 @@ Telegram information and other **public** OSINT sources.
 | 2 | Telegram bot: `/start`, `/help`, menu, router, auth, error handling | ✅ done |
 | 3 | Database: full domain models, repositories, indexes, constraints | ✅ done |
 | 4 | Public Telegram intelligence (user/group/channel/message search) | ✅ done |
-| 5 | IOC extraction | ⛏ next |
-| 6 | Username OSINT + source-adapter architecture | ☐ |
+| 5 | IOC extraction (URL/domain/IP/email/hash/CVE/Telegram) | ✅ done |
+| 6 | Username OSINT + source-adapter architecture | ⛏ next |
 | 7 | Entity resolution, graph, timeline | ☐ |
 | 8 | Background workers (Redis jobs, retries, cancellation) | ☐ |
 | 9 | Watchlist / monitoring | ☐ |
