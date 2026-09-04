@@ -19,8 +19,10 @@ from telegram.ext import ContextTypes
 from apps.bot import audit
 from apps.bot.adapter import reply
 from apps.bot.auth import AccessDenied, Principal, require_admin, resolve_principal
-from apps.bot.views import render_denied, render_error
+from apps.bot.views import render_denied, render_error, render_rate_limited
+from security.config import get_settings
 from security.logging import get_logger
+from security.ratelimit import enforce
 
 _log = get_logger("bot.guard")
 
@@ -57,6 +59,20 @@ def authorized(
                 )
                 await reply(update, render_denied())
                 return
+
+            per_min = get_settings().rate_limit_bot_per_minute
+            if per_min > 0:
+                verdict = enforce([f"bot:{telegram_id}:{act}"], limit=per_min, window_seconds=60)
+                if not verdict.allowed:
+                    _log.warning("bot_rate_limited", telegram_id=telegram_id, action=act)
+                    audit.record(
+                        actor=actor,
+                        action=act,
+                        resource=f"command:{act}",
+                        result="rate_limited",
+                    )
+                    await reply(update, render_rate_limited())
+                    return
 
             try:
                 await fn(update, context, principal)

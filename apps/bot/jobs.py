@@ -32,7 +32,16 @@ def submit_job(
         )
         session.commit()
         job_id = job.id
-    q.enqueue(job_id)
+    try:
+        q.enqueue(job_id)
+    except Exception:
+        # Don't leave a PENDING row the worker will never see.
+        with session_scope() as session:
+            JobRepository(session).transition(
+                job_id, JobState.FAILED, error="queue unavailable at submit time"
+            )
+        _log.exception("job_enqueue_failed", job_id=job_id, kind=kind)
+        raise
     _log.info("job_submitted", job_id=job_id, kind=kind)
     return job_id
 

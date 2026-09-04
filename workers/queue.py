@@ -72,6 +72,10 @@ class RedisJobQueue:
 
         self._r = redis.from_url(url, decode_responses=True)
 
+    def ping(self) -> None:
+        """Force a connection so callers can detect an unreachable Redis."""
+        self._r.ping()
+
     def enqueue(self, job_id: str, *, delay: float = 0.0) -> None:
         if delay > 0:
             self._r.zadd(_DELAYED_KEY, {job_id: time.time() + delay})
@@ -105,7 +109,9 @@ def get_default_queue() -> JobQueue:
     if _default is None:
         url = get_settings().redis_url
         try:
-            _default = RedisJobQueue(url)
+            candidate = RedisJobQueue(url)
+            candidate.ping()  # redis.from_url is lazy; force a real connection
+            _default = candidate
             _log.info("job_queue_ready", backend="redis")
         except Exception as exc:  # noqa: BLE001 - fall back so dev without Redis still works
             _log.warning("redis_queue_unavailable_using_memory", error=str(exc))

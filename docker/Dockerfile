@@ -25,11 +25,15 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 
 COPY . .
 
+# Entrypoint: copied as root and made executable (the repo file may not carry
+# the +x bit, e.g. checked out on a Windows/DrvFS mount).
+RUN cp docker/entrypoint.sh /usr/local/bin/entrypoint.sh \
+ && chmod 0755 /usr/local/bin/entrypoint.sh
+
 # Non-root runtime user.
 RUN useradd --system --uid 1001 --home /app appuser \
  && chown -R appuser:appuser /app
 USER appuser
 
-COPY --chown=appuser:appuser docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["api"]

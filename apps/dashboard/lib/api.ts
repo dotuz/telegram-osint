@@ -202,7 +202,29 @@ export const api = {
   createReport: (value: string) =>
     request<any>("/reports", { method: "POST", body: { value } }),
   report: (id: string) => request<any>(`/reports/${id}`),
-  reportDownloadUrl: (id: string, fmt: string) => `/api/v1/reports/${id}/download?fmt=${fmt}`,
+  // The download endpoint requires the Bearer token, so a bare <a href> 401s.
+  // Fetch it with auth (refreshing once on 401) and hand the browser a blob.
+  downloadReport: async (id: string, fmt: string) => {
+    const path = `/reports/${id}/download?fmt=${fmt}`;
+    const doFetch = () =>
+      fetch(`/api/v1${path}`, {
+        headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+        credentials: "include",
+        cache: "no-store",
+      });
+    let res = await doFetch();
+    if (res.status === 401 && (await tryRefresh())) res = await doFetch();
+    if (!res.ok) throw new ApiError(res.status, "download failed");
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = `report-${id.slice(0, 8)}.${fmt}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+  },
 
   sourcesHealth: () => request<{ sources: any[] }>("/sources/health"),
 };

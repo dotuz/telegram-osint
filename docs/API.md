@@ -87,22 +87,31 @@ Every target / search / watchlist / report is scoped to the resolved user.
 search_id, source_available}`. When no Telegram source is configured,
 `source_available=false` and results come only from the collected corpus.
 
-## Planned surface
+## Surface by phase (all shipped)
 
-| Phase | Endpoints (sketch) |
-|------:|--------------------|
-| 11 | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` |
-| 6 | `POST /username-osint`, `GET /sources`, `GET /sources/health` |
-| 7 | `GET /targets/{id}/graph`, `GET /targets/{id}/timeline` |
-| 8 | `GET /jobs`, `GET /jobs/{id}`, `POST /jobs/{id}/cancel` |
-| 9 | `GET/POST/DELETE /watchlist` |
-| 10 | `POST /reports`, `GET /reports/{id}`, `GET /reports/{id}/download?fmt=pdf|html|json` |
-| 29 | `GET /admin/...` (RBAC: ADMIN) |
+| Phase | Endpoints |
+|------:|-----------|
+| 1 | `GET /health`, `GET /ready` |
+| 4 | `POST /api/v1/telegram/{user,group,channel,messages}`, `GET /api/v1/searches`, `GET /api/v1/sources/health` |
+| 5 | `GET /api/v1/iocs` |
+| 6 | `POST /api/v1/username` |
+| 7 | `GET/POST /api/v1/targets`, `GET /api/v1/targets/{id}`, `GET /api/v1/targets/{id}/{graph,timeline}`, `GET /api/v1/entities/{type}/{id}/{graph,timeline}` |
+| 8 | `GET /api/v1/jobs`, `GET /api/v1/jobs/{id}`, `POST /api/v1/jobs/{id}/cancel` |
+| 9 | `GET/POST /api/v1/watchlist`, `DELETE /api/v1/watchlist/{value}`, `POST /api/v1/watchlist/{id}/poll` |
+| 10 | `GET/POST /api/v1/reports`, `GET /api/v1/reports/{id}`, `GET /api/v1/reports/{id}/download?fmt=json\|html\|pdf` |
+| 11 | `GET /api/v1/stats`, `GET /api/v1/audit` (ADMIN) |
+| 12 | `POST /api/v1/auth/{login,refresh,logout}`, `GET /api/v1/auth/me` |
 
-## Conventions (from Phase 12)
+## Conventions
 
-- Auth: `Authorization: Bearer <access-token>`; refresh-token rotation.
-- All state-changing requests from browsers require `X-CSRF-Token` + Origin check.
-- Resource IDs are authorized against the caller's workspace — never trusted blindly.
-- Pagination: `?limit=&cursor=`. Rate-limit headers: `X-RateLimit-*`.
-- Errors: `{ "error": { "code": "...", "message": "..." } }` — no stack traces.
+- Auth: `Authorization: Bearer <access-token>` on every call; `POST /auth/refresh`
+  rotates it (see **Authentication**). A malformed token → 401.
+- State-changing requests (`POST/PUT/PATCH/DELETE`) with a foreign `Origin`
+  header → 403 (`ENFORCE_ORIGIN_CHECK`). The refresh cookie is `SameSite=Strict`.
+- Resource IDs are authorized against the caller's per-user data — never trusted
+  blindly. The shared intelligence graph (`/iocs`, `/entities/*`) is visible to
+  every authenticated analyst by design.
+- Rate limits: 429 with `Retry-After` + `X-RateLimit-Limit` on search / username
+  / report endpoints; disable with `RATE_LIMIT_ENABLED=false`.
+- Errors: FastAPI's `{ "detail": ... }` — generic messages, no stack traces.
+- Every response carries `X-Request-ID` (echoed from the request or generated).

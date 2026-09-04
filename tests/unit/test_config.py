@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from security.config import Settings
@@ -10,7 +12,11 @@ def test_settings_load_from_env(settings):
     assert settings.telegram_allowed_user_ids == [111, 222]
     assert settings.telegram_admin_user_ids == [111]
     assert settings.cors_allowed_origins == ["http://localhost:3000"]
-    assert settings.is_sqlite is True
+    # Default hermetic run is SQLite; a QA/CI run may point at another engine via
+    # TOI_TEST_DATABASE_URL -- assert is_sqlite tracks the actual URL either way.
+    assert settings.is_sqlite is settings.database_url.startswith("sqlite")
+    if not os.environ.get("TOI_TEST_DATABASE_URL"):
+        assert settings.is_sqlite is True
 
 
 def test_secrets_are_not_printed(settings):

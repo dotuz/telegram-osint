@@ -1,5 +1,72 @@
 # Changelog
 
+## [0.13.0] - 2026-09-04 — Phase 13: Final QA, E2E, production readiness
+
+Full-platform QA gate: real PostgreSQL 18 (migrate/downgrade/upgrade round-trip,
+FK/unique/cascade verification, pg_dump/pg_restore drill), a genuine
+Telegram-command → job → worker → OSINT → evidence → report → API E2E test, a
+concurrency regression on refresh-token rotation, and a production Next.js
+dashboard build/typecheck. See `PHASE_13_FINAL_QA_REPORT.md` for the full
+evidence trail, test matrix, and findings.
+
+### Fixed
+- **Bot command flooding**: bot handlers had no rate limit, so an allow-listed
+  user could flood the job queue / external OSINT sources. `apps/bot/guard.py`
+  now enforces a per-Telegram-user, per-command sliding window
+  (`RATE_LIMIT_BOT_PER_MINUTE`, default 20/min) before dispatching a handler.
+- **Job queue silently broken on Redis outage**: `get_default_queue()` used
+  `redis.from_url()`, which is lazy and never raises, so an unreachable Redis
+  returned a `RedisJobQueue` that failed on first use instead of falling back
+  to the in-memory queue. Added a connection probe (`RedisJobQueue.ping()`)
+  mirroring the rate limiter's fallback pattern.
+- **Orphaned jobs on enqueue failure**: `submit_job` committed the `Job` row
+  before enqueueing; if `queue.enqueue()` raised, the row stayed `PENDING`
+  forever with no worker able to see it. It's now transitioned to `FAILED`
+  with a clear error before the exception propagates.
+- **Refresh-token rotation race**: two concurrent `POST /auth/refresh` calls
+  with the same token could both read it as active and each mint a valid
+  successor. `RefreshTokenRepository.rotate()` now takes
+  `SELECT ... FOR UPDATE` on the token row, so the second call serialises
+  behind the first and lands in reuse detection (family revocation) instead.
+- **Docker entrypoint not executable**: `docker/entrypoint.sh` was committed
+  `100644`; `ENTRYPOINT` (exec form) requires the `+x` bit, so the production
+  image would fail to start. Fixed the git mode (`100755`) and added a
+  belt-and-suspenders `RUN chmod 0755` in `docker/Dockerfile`, applied before
+  `USER appuser` so the write is unambiguous.
+- **Dashboard report download 401s**: the download links were bare
+  `<a href="/api/v1/reports/{id}/download">` — a browser navigation sends no
+  `Authorization` header and the refresh cookie is scoped to `/api/v1/auth`
+  only, so every download 401'd once the dev shim was disabled. Replaced with
+  `api.downloadReport()` — an authenticated `fetch` (refreshing once on 401)
+  that saves the response as a blob.
+
+### Added
+- `tests/e2e/test_full_pipeline.py` — bot `/username` → job → worker (synthetic
+  collector) → evidence → bot `/report` → job → report artifacts on disk → API
+  retrieval of json/html/pdf → target graph → cross-user 404 isolation, all
+  through the real handler/worker/API code paths.
+- `tests/integration/test_queue_resilience.py`, `tests/security/test_bot_rate_limit.py`,
+  `tests/security/test_refresh_concurrency.py` — regression coverage for the four
+  fixes above.
+- `tests/conftest.py` — opt-in `TOI_TEST_DATABASE_URL` so the whole suite can run
+  against a real server database (used to validate PostgreSQL 18: 290/290 pass).
+- `security/config.py` — `rate_limit_bot_per_minute` setting.
+- `PHASE_13_FINAL_QA_REPORT.md` — full QA report: test matrix, findings with
+  root cause/fix/regression test, PostgreSQL + backup/restore evidence, Docker
+  and dashboard build status, threat-model reconciliation, GO decision.
+
+### Verified (no code change needed)
+- IDOR/BOLA, CSRF/Origin, CORS, SSRF guard, SQLi/XSS injection regression,
+  rate limiting, secret non-exposure, refresh rotation/family-revocation — all
+  re-run and green (`tests/security/`, 39 tests).
+- PostgreSQL 18: `alembic upgrade head` / `downgrade base` / `upgrade head`
+  round-trip, `alembic check` clean, FK/unique/cascade constraints enforced,
+  290/290 tests pass against a live server database.
+- Backup/restore: `pg_dump -Fc` → drop database → `pg_restore` → data and
+  `alembic_version` intact.
+- Dashboard: `npm install`, `tsc --noEmit`, `next build` (12/12 routes) all
+  succeed; `next lint` clean.
+
 ## [0.12.0] - 2026-09-04 — Phase 12: Security hardening
 
 ### Added

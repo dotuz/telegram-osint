@@ -94,6 +94,8 @@ class Settings(BaseSettings):
     # Per-IP backstop = per-principal limit * this factor (so a shared NAT / proxy
     # does not let one user's quota starve everyone else behind the same address).
     rate_limit_ip_burst_multiplier: int = 20
+    # Per-Telegram-user, per-command sliding window for the bot (0 disables).
+    rate_limit_bot_per_minute: int = 20
 
     # --- Browser security ---
     # State-changing requests whose Origin is set must match an allowed origin.

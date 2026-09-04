@@ -39,15 +39,19 @@ class RefreshTokenRepository:
         self.session.flush()
         return raw
 
-    def _get(self, raw: str) -> RefreshToken | None:
-        return self.session.execute(
-            select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(raw))
-        ).scalar_one_or_none()
+    def _get(self, raw: str, *, for_update: bool = False) -> RefreshToken | None:
+        stmt = select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(raw))
+        if for_update:
+            # Serialise concurrent rotations of the same token: the second waiter
+            # then sees revoked_at set and falls into reuse detection instead of
+            # minting a second valid successor. No-op on SQLite (single-writer).
+            stmt = stmt.with_for_update()
+        return self.session.execute(stmt).scalar_one_or_none()
 
     def rotate(
         self, raw: str, *, user_agent: str | None = None, ip_metadata: str | None = None
     ) -> tuple[str, User]:
-        row = self._get(raw)
+        row = self._get(raw, for_update=True)
         if row is None:
             raise RefreshTokenReuseError("unknown refresh token")
         if not row.is_active:

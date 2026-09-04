@@ -4,6 +4,11 @@ Tests run fully offline against an in-memory SQLite database. No Postgres, Redis
 or network access is required for the unit suite. Integration tests that need
 real services are marked ``@pytest.mark.integration`` and skipped unless the
 services are configured.
+
+To run the suite against a real database instead (e.g. PostgreSQL in CI or a QA
+gate), export ``TOI_TEST_DATABASE_URL`` -- it overrides the in-memory SQLite URL
+below. The database must already exist and be reachable; the schema is created
+per-test the same way.
 """
 
 from __future__ import annotations
@@ -20,7 +25,7 @@ os.environ.update(
     APP_DEBUG="true",
     LOG_LEVEL="WARNING",
     LOG_JSON="false",
-    DATABASE_URL="sqlite+pysqlite:///:memory:",
+    DATABASE_URL=os.environ.get("TOI_TEST_DATABASE_URL", "sqlite+pysqlite:///:memory:"),
     REDIS_URL="redis://localhost:6379/15",
     SECRET_KEY="test-secret-not-for-production-000000000000000000000000",
     TELEGRAM_BOT_TOKEN="123456:TEST",

@@ -18,6 +18,7 @@ GENERIC_DENIED = (
     "contact the operator."
 )
 SOURCE_UNAVAILABLE = "Collection failed. Source unavailable."
+GENERIC_RATE_LIMITED = "You're sending commands too quickly. Please wait a moment and try again."
 
 
 def render_start(*, first_name: str | None = None) -> BotMessage:
@@ -68,6 +69,10 @@ def render_denied() -> BotMessage:
 
 def render_error() -> BotMessage:
     return BotMessage(text=GENERIC_ERROR)
+
+
+def render_rate_limited() -> BotMessage:
+    return BotMessage(text=GENERIC_RATE_LIMITED)
 
 
 def render_whoami(*, telegram_id: int, role: str) -> BotMessage:

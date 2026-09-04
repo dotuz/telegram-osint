@@ -29,7 +29,7 @@ Telegram information and other **public** OSINT sources.
 | 10 | Reports (PDF / HTML / JSON) | ✅ done |
 | 11 | Web dashboard (Next.js) + token auth + RBAC | ✅ done |
 | 12 | Security hardening (CSRF, CORS, rate limits, IDOR, refresh tokens) | ✅ done |
-| 13 | Final QA | ⛏ next |
+| 13 | Final QA: E2E, PostgreSQL, backup/restore, Docker, dashboard build, perf | ✅ done — see [`PHASE_13_FINAL_QA_REPORT.md`](PHASE_13_FINAL_QA_REPORT.md) |
 
 ## Architecture (short)
 

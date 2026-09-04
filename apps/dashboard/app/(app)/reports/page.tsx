@@ -50,15 +50,13 @@ export default function ReportsPage() {
               <div className="flex items-center gap-3">
                 <Tag value={r.status} />
                 {Object.keys(r.artifacts).map((fmt) => (
-                  <a
+                  <button
                     key={fmt}
                     className="text-accent text-sm"
-                    href={api.reportDownloadUrl(r.id, fmt)}
-                    target="_blank"
-                    rel="noreferrer"
+                    onClick={() => void api.downloadReport(r.id, fmt)}
                   >
                     {fmt}
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>

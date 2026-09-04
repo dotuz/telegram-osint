@@ -59,7 +59,14 @@ usernames, memberships, messages, relationships, or timestamps.
   is stored. `POST /api/v1/auth/refresh` is single-use: it revokes the presented
   token and issues a new one. Presenting an already-spent token is treated as
   theft and revokes the **entire** token family for that user. `logout` revokes.
-  Tested in `test_refresh_rotation.py`.
+  `rotate()` takes `SELECT ... FOR UPDATE` on the token row (Phase 13) so two
+  concurrent refresh calls with the same token cannot both mint a valid
+  successor — the second serialises behind the first and lands in reuse
+  detection. Tested in `test_refresh_rotation.py`, `test_refresh_concurrency.py`.
+- The dashboard keeps the **access token** in `localStorage` (short TTL, never
+  the refresh token) and the **refresh token** only in the HttpOnly cookie —
+  JavaScript, including an XSS payload, can read the access token but not the
+  refresh token, bounding the blast radius to the access-token TTL.
 - **Bot**: only numeric IDs in `TELEGRAM_ALLOWED_USER_IDS` may use commands;
   admin commands require `TELEGRAM_ADMIN_USER_IDS`.
 - **RBAC** roles: `USER`, `ANALYST`, `ADMIN`. Authorization is always
@@ -107,11 +114,11 @@ string concatenation is forbidden (enforced by review + `ruff` `S608`).
 Protections: SQLi, command injection, path traversal, SSRF, XSS, template
 injection, malicious filenames, oversized payloads.
 
-## Rate limiting (Phase 12)
+## Rate limiting (Phase 12, extended Phase 13)
 
 `security/ratelimit.py` — a sliding-window limiter, Redis-backed
 (`zremrangebyscore`/`zadd`/`zcard` pipeline) with an in-memory fallback, same
-pattern as the job queue. Each guarded endpoint enforces two keys: a
+pattern as the job queue. Each guarded API endpoint enforces two keys: a
 **per-principal** quota (the real limit, keyed on `user_id`/email so a spoofed
 `X-Forwarded-For` or a shared NAT cannot lift it) and a much wider **per-IP**
 backstop (`limit * RATE_LIMIT_IP_BURST_MULTIPLIER`). Login is limited per-IP
@@ -119,6 +126,17 @@ only (no principal yet). Over-limit → `429` with `Retry-After` /
 `X-RateLimit-*`. Master switch `RATE_LIMIT_ENABLED` (off in the test suite);
 limits configurable via `RATE_LIMIT_*`. Reports are jobs/hour capped; watchlist
 has a max-targets cap. Tested in `tests/security/test_rate_limiting.py`.
+
+The **bot** enforces the same limiter per Telegram user id + command
+(`apps/bot/guard.py`, `RATE_LIMIT_BOT_PER_MINUTE`, default 20/min) — closed in
+Phase 13 after final QA found an allow-listed user could otherwise flood the
+job queue / external OSINT sources with unthrottled `/search`, `/username`,
+`/report` calls. Tested in `tests/security/test_bot_rate_limit.py`.
+
+Reverse-proxy deployments must run uvicorn with `--proxy-headers` and a
+trusted-hosts allow-list (or terminate TLS at a proxy that sets the real client
+IP correctly) — the rate limiter and audit log use `request.client.host`
+as-is and never trust `X-Forwarded-For` from an untrusted hop.
 
 ## Audit logging
 
