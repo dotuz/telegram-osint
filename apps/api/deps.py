@@ -37,6 +37,11 @@ def get_collector() -> object | None:
     return None
 
 
+def get_username_collector() -> object | None:
+    """Override hook for the username-OSINT collector (tests inject fake adapters)."""
+    return None
+
+
 def current_user(
     x_user_email: str | None = Header(default=None),
 ) -> dict[str, str]:

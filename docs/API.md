@@ -36,6 +36,7 @@ use and every search/result is scoped to it.
 | GET | `/api/v1/searches` | — | `{searches: [...]}` (this user's history) |
 | GET | `/api/v1/sources/health` | — | `{sources: [{name, healthy, detail}]}` |
 | GET | `/api/v1/iocs` | `?message_id` \| `?entity_type&entity_id` \| `?ioc_type` \| (recent) | `{iocs: [{id, ioc_type, value, times_observed, linked_entity_*, evidence_count}]}` |
+| POST | `/api/v1/username` | `{username}` | `{username, found, sources: [{platform, url, confidence, evidence[]}], same_as_edges, notes, disclaimer}` — `confidence` is correlation (0–100); every response carries a "not proof of a shared identity" disclaimer |
 
 `IntelResponse`: `{kind, found, entity_type, entity_id, summary, items, notes,
 search_id, source_available}`. When no Telegram source is configured,

@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Bump this as phases ship. A command is "live" once its phase has landed.
-CURRENT_PHASE = 4
+CURRENT_PHASE = 6
 
 
 @dataclass(frozen=True)

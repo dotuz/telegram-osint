@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.6.0] - 2026-09-04 — Phase 6: Username OSINT
+
+### Added
+- `collectors/common/http.py` — `SafeFetcher`: the single SSRF-guarded outbound
+  HTTP choke point. Scheme allow-list; DNS resolved up front and every resolved
+  address checked (loopback / private / link-local / ULA / multicast / reserved /
+  cloud-metadata rejected); host re-validated after every redirect; redirect,
+  size and timeout caps; injectable `transport` + `resolver` for offline tests;
+  `HTTP_FETCH_ALLOW_PRIVATE` lab escape hatch.
+- `collectors/username/` — adapter architecture: `UsernameAdapter` +
+  `username_registry` (add a source = one file + `register()`). Built-ins:
+  `GitHubAdapter`, `RedditAdapter`, `WebProbeAdapter` (+ `default_web_adapters`
+  for x/instagram/youtube/tiktok/keybase/gitlab), `TelegramPresenceAdapter`.
+  `UsernameOsintCollector` fans out concurrently, degrades per-adapter.
+- `intelligence/confidence/` — correlation confidence engine (0–100). Weighted
+  signals (username, display name, website domain, bio similarity, email, avatar,
+  location); bands high/medium/low/username-only. **Never asserts identity** —
+  strongest output is "high-confidence potential match"; `assert_safe_phrasing`
+  guards output and is unit-tested.
+- `intelligence/username_osint.py` — `UsernameOsintService`: runs the collector,
+  persists `Username` + `ExternalAccount`/`TelegramAccount` entities, scores each
+  account's corroboration with the others, records it as `identity_correlation`
+  evidence, adds `USERNAME_FOUND_ON` + `ACCOUNT_POSSIBLY_SAME_AS` edges, always
+  returns a disclaimer.
+- Bot `/username <handle>` live (`router.CURRENT_PHASE = 6`); API
+  `POST /api/v1/username`.
+- `RelationshipType.ACCOUNT_POSSIBLY_SAME_AS` (no migration — `rel_type` is a
+  free string column).
+- 32 new tests (176 total): SSRF policy, confidence weights/bands/phrasing,
+  adapters (MockTransport), collector fan-out + partial failure, service
+  persistence/idempotency, bot, API.
+
+### Fixed
+- `security/logging.py` — logger factory now resolves `sys.stderr` at call time,
+  so pytest's per-test capture never leaves a closed file handle behind
+  (`cache_logger_on_first_use=False`).
+
 ## [0.5.0] - 2026-09-04 — Phase 5: IOC intelligence
 
 ### Added

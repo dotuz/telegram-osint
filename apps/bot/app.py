@@ -18,7 +18,7 @@ from telegram.ext import (
 
 from apps.bot.auth import warn_if_open_or_closed
 from apps.bot.errors import on_error
-from apps.bot.handlers import admin, common, telegram_intel
+from apps.bot.handlers import admin, common, telegram_intel, username_osint
 from apps.bot.handlers.stubs import make_stub_handler
 from apps.bot.router import ALL_COMMANDS, public_command_menu
 from security.config import Settings, get_settings
@@ -40,6 +40,8 @@ _LIVE_HANDLERS = {
     "channel": telegram_intel.channel_intel,
     "message": telegram_intel.message_search,
     "history": telegram_intel.history,
+    # Phase 6: username OSINT
+    "username": username_osint.username_osint,
 }
 
 

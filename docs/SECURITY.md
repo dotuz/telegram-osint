@@ -65,13 +65,17 @@ usernames, memberships, messages, relationships, or timestamps.
   `Secure`, `HttpOnly`, Origin/Referer checks on all state-changing endpoints.
   CORS is not treated as CSRF protection.
 
-## SSRF protection (Phase 4/12)
+## SSRF protection (`collectors/common/http.py`, Phase 6)
 
-The web collector fetches user-influenced URLs. Before every fetch, and again
-after every redirect: scheme allow-list (`http`/`https` only), DNS resolution,
-and rejection of loopback, private IPv4/IPv6, link-local, and cloud metadata
-endpoints. Redirects capped, response size capped, strict timeout, outbound
-requests logged. `HTTP_FETCH_ALLOW_PRIVATE=true` exists only for tests.
+All outbound OSINT HTTP goes through one class, `SafeFetcher`. Before every fetch
+and again after **every** redirect: scheme allow-list (`http`/`https` only), DNS
+resolved up front with **every** resolved address checked and rejected if
+loopback / private / link-local / ULA / multicast / reserved / cloud-metadata
+(`169.254.169.254`, `100.100.100.200`, `fd00:ec2::254`) / blocked hostname
+(`metadata.google.internal`, `localhost`). Redirects capped, response size
+capped (streamed, aborts mid-body), strict total timeout, every attempt logged.
+`HTTP_FETCH_ALLOW_PRIVATE=true` is a lab-only escape hatch. Tested in
+`tests/unit/test_ssrf_fetcher.py`; the Phase-12 suite adds the adversarial cases.
 
 ## Input validation
 

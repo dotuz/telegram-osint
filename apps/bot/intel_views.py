@@ -153,6 +153,39 @@ def render_message_hits(
     return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
 
 
+def render_username_osint(
+    *,
+    username: str,
+    found: bool,
+    sources: Sequence[Mapping[str, object]],
+    notes: Sequence[str],
+    disclaimer: str,
+) -> BotMessage:
+    if not found:
+        body = [f"*Username OSINT:* `{username}`", "", "No public accounts found for this handle."]
+        body += [f"_{n}_" for n in notes]
+        return BotMessage(text="\n".join(body), parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+    lines = [f"*Username OSINT:* `{username}`", ""]
+    for s in sources:
+        raw_conf = s.get("confidence", 0)
+        conf = int(raw_conf) if isinstance(raw_conf, int | float | str) else 0
+        icon = "🟢" if conf >= 75 else "🟡" if conf >= 45 else "🟠" if conf >= 20 else "⚪"
+        lines.append(f"{icon} *{s.get('platform')}* — {conf}% potential match")
+        if s.get("url"):
+            lines.append(f"   {s['url']}")
+        raw_ev = s.get("evidence")
+        ev = [e for e in raw_ev if isinstance(e, str)][:3] if isinstance(raw_ev, list) else []
+        for e in ev:
+            lines.append(f"   • {e}")
+        lines.append("")
+
+    lines.append(f"_{disclaimer}_")
+    for n in notes:
+        lines.append(f"_{n}_")
+    return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+
 def render_history(rows: Sequence[Mapping[str, object]]) -> BotMessage:
     if not rows:
         return BotMessage(

@@ -53,13 +53,18 @@ def configure_logging(*, level: str = "INFO", json_output: bool = False) -> None
         else structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty())
     )
 
+    def _current_stderr_logger(*_args: object) -> structlog.PrintLogger:
+        # Resolve sys.stderr at call time so pytest's per-test capture (which
+        # closes the previous buffer) never leaves a stale file handle behind.
+        return structlog.PrintLogger(sys.stderr)
+
     structlog.configure(
         processors=[*shared_processors, renderer],
         wrapper_class=structlog.make_filtering_bound_logger(
             logging.getLevelNamesMapping().get(level.upper(), logging.INFO)
         ),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
-        cache_logger_on_first_use=True,
+        logger_factory=_current_stderr_logger,
+        cache_logger_on_first_use=False,
     )
 
     logging.basicConfig(

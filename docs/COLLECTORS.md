@@ -72,10 +72,21 @@ collection; changes create a new observation.
 | Slug | Source | Phase | Auth |
 |------|--------|------:|------|
 | `telegram_public` | Public Telegram (Bot API + optional operator acct) | 4 ✅ | bot token / operator |
-| `github` | GitHub public profiles, repos, gists | 6 | optional `GITHUB_TOKEN` |
-| `reddit` | Reddit public posts/comments | 6 | optional app creds |
-| `web` | Generic public web pages | 6 | none |
-| `username_x`, `username_instagram`, `username_youtube`, `username_tiktok` | Public presence checks | 6+ | none / optional |
+| `username_osint` | Fan-out over all username adapters | 6 ✅ | — |
+
+**Username adapters** (`collectors/username/`, registered on `username_registry`):
+
+| Platform | Endpoint | Auth |
+|----------|----------|------|
+| `github` | `api.github.com/users/{u}` | optional `GITHUB_TOKEN` |
+| `reddit` | `reddit.com/user/{u}/about.json` | none |
+| `telegram` | public profile/chat lookup | bot token / operator |
+| `x` `instagram` `youtube` `tiktok` `keybase` `gitlab` | `WebProbeAdapter` (200 vs 404 + negative-marker check) | none |
+
+Every HTTP adapter fetches through `SafeFetcher` (SSRF-guarded). Correlation
+confidence and `ACCOUNT_POSSIBLY_SAME_AS` edges are added by
+`intelligence/username_osint.py`, not the collector — collectors stay
+independent of the intelligence engine.
 
 ### Telegram sources (`collectors/telegram/source.py`)
 
