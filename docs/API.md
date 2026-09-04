@@ -46,6 +46,9 @@ use and every search/result is scoped to it.
 | GET | `/api/v1/jobs` | `?limit` | recent background jobs |
 | GET | `/api/v1/jobs/{id}` | — | job detail (state, progress, params, result, timestamps) |
 | POST | `/api/v1/jobs/{id}/cancel` | — | `{cancelled: bool, state}` |
+| GET · POST | `/api/v1/watchlist` | POST `{value, sources?}` | list / add (`429` on `RATE_LIMIT_WATCH_MAX_TARGETS`) |
+| DELETE | `/api/v1/watchlist/{value}` | — | `{removed: bool}` |
+| POST | `/api/v1/watchlist/{id}/poll` | — | run a poll now → `{target, activities[], notes}` |
 
 `IntelResponse`: `{kind, found, entity_type, entity_id, summary, items, notes,
 search_id, source_available}`. When no Telegram source is configured,

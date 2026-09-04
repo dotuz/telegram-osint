@@ -18,7 +18,14 @@ from telegram.ext import (
 
 from apps.bot.auth import warn_if_open_or_closed
 from apps.bot.errors import on_error
-from apps.bot.handlers import admin, common, graph_views, telegram_intel, username_osint
+from apps.bot.handlers import (
+    admin,
+    common,
+    graph_views,
+    telegram_intel,
+    username_osint,
+    watchlist,
+)
 from apps.bot.handlers.stubs import make_stub_handler
 from apps.bot.router import ALL_COMMANDS, public_command_menu
 from security.config import Settings, get_settings
@@ -46,6 +53,10 @@ _LIVE_HANDLERS = {
     "cancel": telegram_intel.cancel_cmd,
     "jobs": admin.jobs_cmd,
     "stats": admin.stats_cmd,
+    # Phase 9: watchlist / monitoring
+    "watch": watchlist.watch_cmd,
+    "unwatch": watchlist.unwatch_cmd,
+    "watchlist": watchlist.watchlist_cmd,
 }
 
 

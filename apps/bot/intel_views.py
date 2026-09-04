@@ -186,6 +186,49 @@ def render_username_osint(
     return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
 
 
+def render_watch_activity(*, target: str, activities: Sequence[Mapping[str, object]]) -> BotMessage:
+    lines = ["*NEW PUBLIC ACTIVITY*", "", f"Target: `{target}`", ""]
+    for a in activities:
+        when = str(a.get("when") or "")[11:16] or "—"
+        lines.append(f"Source: {a.get('source')}")
+        lines.append(f"Time: {when}")
+        lines.append(f"{a.get('detail')}")
+        if a.get("reference"):
+            lines.append(f"{a['reference']}")
+        lines.append("")
+    lines.append("_Only public activity is monitored._")
+    return BotMessage(text="\n".join(lines).rstrip(), parse_mode="Markdown")
+
+
+def render_watchlist(rows: Sequence[Mapping[str, object]]) -> BotMessage:
+    if not rows:
+        return BotMessage(
+            text="Your watchlist is empty. Add one with `/watch @username`.",
+            parse_mode="Markdown",
+            keyboard=BACK_TO_MENU,
+        )
+    lines = ["*Watchlist*", ""]
+    for r in rows:
+        state = "active" if r.get("is_active") else "paused"
+        checked = str(r.get("last_checked_at") or "never")[:16].replace("T", " ")
+        lines.append(f"• `{r.get('value')}` — {state} · last check: {checked}")
+    lines.append("")
+    lines.append("_/unwatch <handle> to stop monitoring._")
+    return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+
+def render_watch_added(*, value: str, count: int, limit: int) -> BotMessage:
+    return BotMessage(
+        text=(
+            f"👁 Watching `{value}` for new public activity.\n\n"
+            f"_{count}/{limit} watch slots used. I'll notify you here on new public messages "
+            f"or newly discovered public accounts._"
+        ),
+        parse_mode="Markdown",
+        keyboard=BACK_TO_MENU,
+    )
+
+
 def render_job_queued(job_id: str, what: str) -> BotMessage:
     return BotMessage(
         text=(

@@ -17,7 +17,15 @@ def run_worker() -> None:  # pragma: no cover - process entrypoint
     register_default_collectors()
 
     import workers.handlers  # noqa: F401 - registers job handlers
+    from workers.queue import get_default_queue
+    from workers.scheduler import schedule_due_watches_tick
 
     token = settings.telegram_bot_token.get_secret_value() or None
+    queue = get_default_queue()
     _log.info("worker_booting", env=settings.app_env)
-    JobRunner(bot_token=token).run_forever()
+    JobRunner(
+        queue,
+        bot_token=token,
+        on_tick=lambda: schedule_due_watches_tick(queue),
+        tick_interval=min(60.0, float(settings.watch_poll_interval_seconds)),
+    ).run_forever()

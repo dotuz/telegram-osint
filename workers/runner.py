@@ -48,11 +48,16 @@ class JobRunner:
         bot_token: str | None = None,
         retry_base_seconds: float = _RETRY_BASE_SECONDS,
         notifier: Callable[[Notification], None] | None = None,
+        on_tick: Callable[[], None] | None = None,
+        tick_interval: float = 60.0,
     ) -> None:
         self.queue = queue or get_default_queue()
         self.bot_token = bot_token
         self.retry_base_seconds = retry_base_seconds
         self._notifier = notifier or self._send_telegram
+        self._on_tick = on_tick
+        self._tick_interval = tick_interval
+        self._last_tick = 0.0
         self._stop = False
 
     # ------------------------------------------------------------------ loop
@@ -60,11 +65,24 @@ class JobRunner:
         _log.info("worker_started")
         while not self._stop:
             try:
+                self._maybe_tick()
                 self.run_once(poll_timeout=poll_timeout)
             except Exception:  # noqa: BLE001 - never let the loop die
                 _log.exception("worker_iteration_failed")
                 time.sleep(1)
         _log.info("worker_stopped")
+
+    def _maybe_tick(self) -> None:
+        if self._on_tick is None:
+            return
+        now = time.monotonic()
+        if now - self._last_tick < self._tick_interval:
+            return
+        self._last_tick = now
+        try:
+            self._on_tick()
+        except Exception:  # noqa: BLE001 - a bad tick must not stop the loop
+            _log.exception("worker_tick_failed")
 
     def stop(self) -> None:
         self._stop = True

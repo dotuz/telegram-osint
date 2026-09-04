@@ -48,7 +48,7 @@ surface is complete and discoverable without fabricating functionality.
 | `/username` | 6 ✅ (Phase 8: enqueued) | Username OSINT across public sources |
 | `/cancel` | 8 ✅ | Cancel a queued/running job by id prefix |
 | `/jobs` `/stats` | 8 ✅ | (admin) recent jobs / usage + queue depth |
-| `/watch` `/unwatch` | 9 | Watchlist |
+| `/watch` `/unwatch` `/watchlist` | 9 ✅ | Monitor public handles; worker polls every `WATCH_POLL_INTERVAL_SECONDS` and DMs "NEW PUBLIC ACTIVITY". Capped by `RATE_LIMIT_WATCH_MAX_TARGETS` |
 | `/report` | 10 | Async report generation |
 | `/settings` | 11 | User preferences |
 | `/audit` `/users` | 12 | (admin) audit log, user management |

@@ -11,9 +11,13 @@ from apps.bot.intel_views import (
     render_chat_intel,
     render_user_intel,
     render_username_osint,
+    render_watch_activity,
 )
 from collectors.common.interfaces import Collector
 from collectors.telegram.collector import KIND_CHANNEL, KIND_GROUP, TelegramPublicCollector
+from database.models.user import User
+from database.models.watchlist import Watchlist
+from intelligence.monitoring import WatchMonitor
 from intelligence.search import TelegramIntelService
 from intelligence.username_osint import UsernameOsintService
 from workers.registry import JobContext, JobOutcome, Notification, register
@@ -106,6 +110,39 @@ async def run_username_osint(ctx: JobContext) -> JobOutcome:
     return JobOutcome(
         summary={"found": r.found, "sources": len(r.sources), "target_id": r.target_id},
         notification=_notify(ctx, text),
+    )
+
+
+@register("watch_poll")
+async def run_watch_poll(ctx: JobContext) -> JobOutcome:
+    wid = ctx.params["watchlist_id"]
+    entry = ctx.session.get(Watchlist, wid)
+    if entry is None or not entry.is_active:
+        return JobOutcome(summary={"skipped": True})
+
+    monitor = WatchMonitor(
+        ctx.session,
+        telegram_collector=_TG_COLLECTOR,
+        username_collector=_USERNAME_COLLECTOR,
+    )
+    result = await monitor.poll(entry)
+    ctx.progress(90)
+
+    notification = None
+    if result.activities:
+        user = ctx.session.get(User, entry.user_id)
+        chat_id = user.telegram_user_id if user is not None else None
+        if chat_id is not None:
+            notification = Notification(
+                chat_id=chat_id,
+                text=render_watch_activity(
+                    target=result.target,
+                    activities=[a.as_dict() for a in result.activities],
+                ).text,
+            )
+    return JobOutcome(
+        summary={"activities": len(result.activities), "notes": result.notes},
+        notification=notification,
     )
 
 

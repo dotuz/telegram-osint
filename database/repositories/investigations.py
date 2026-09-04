@@ -233,7 +233,7 @@ class WatchlistRepository(ScopedRepository):
             Watchlist.value_normalized == norm,
         )
         watch = self.session.execute(stmt).scalar_one_or_none()
-        if watch is None:
+        if watch is None or not watch.is_active:
             return False
         watch.is_active = False
         return True

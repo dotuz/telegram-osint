@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.9.0] - 2026-09-04 — Phase 9: Watchlist / monitoring
+
+### Added
+- `intelligence/monitoring.py` — `WatchMonitor.poll(entry)`: re-collects a
+  watched handle's public presence (Telegram channel/group messages; optionally
+  username-OSINT platform discovery), diffs against `last_seen_marker`
+  (`{telegram_max_msg_id, platforms}`), emits one `Activity` per genuinely new
+  public event, and advances the marker so the next poll doesn't re-notify.
+  `due_watchlist_ids()` / `mark_scheduled()` for scheduling.
+- `workers/scheduler.py` — `schedule_due_watches()`: finds active entries past
+  the poll interval, enqueues one `watch_poll` job each, optimistically stamps
+  `last_checked_at`. Wired into the worker loop as a periodic tick
+  (`JobRunner(on_tick=…, tick_interval=…)`).
+- `workers/handlers.py::watch_poll` — runs the monitor for one entry and delivers
+  a `NEW PUBLIC ACTIVITY` notification to the watcher's DM (`user.telegram_user_id`);
+  skips inactive entries.
+- Bot: `/watch @username [sources]`, `/unwatch @username`, `/watchlist` live
+  (`router.CURRENT_PHASE = 9`). `/watch` enforces
+  `RATE_LIMIT_WATCH_MAX_TARGETS`, resolves a `Target`, and kicks an immediate
+  first poll.
+- API: `GET/POST /api/v1/watchlist`, `DELETE /api/v1/watchlist/{value}`,
+  `POST /api/v1/watchlist/{id}/poll` (429 on limit).
+- `WATCH_POLL_INTERVAL_SECONDS` setting (default 300).
+- 15 new tests (224 total): monitor detection/dedupe/new-message/new-platform,
+  due + mark-scheduled, scheduler no-double-enqueue, `watch_poll` job +
+  notification + inactive-skip, bot `/watch` (+limit) `/unwatch` `/watchlist`,
+  watchlist API + isolation.
+
+### Fixed
+- `WatchlistRepository.remove` returns `False` when the entry is already inactive.
+
 ## [0.8.0] - 2026-09-04 — Phase 8: Background workers
 
 ### Added

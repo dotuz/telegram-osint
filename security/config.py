@@ -89,6 +89,9 @@ class Settings(BaseSettings):
     rate_limit_reports_per_hour: int = 5
     rate_limit_watch_max_targets: int = 25
 
+    # --- Monitoring / watchlist ---
+    watch_poll_interval_seconds: int = 300
+
     # ------------------------------------------------------------------
     # validators / normalisation
     # ------------------------------------------------------------------

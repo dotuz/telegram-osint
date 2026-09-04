@@ -131,6 +131,24 @@ Cancellation (`/cancel`, `POST /jobs/{id}/cancel`) sets `CANCELLED`; the runner
 skips it before pickup and after completion. `/message` and `/history` stay
 synchronous (DB-only).
 
+## Watchlist monitoring (Phase 9)
+
+```
+worker loop tick (every ≤60 s)
+   │  schedule_due_watches(): active entries where last_checked_at < now − interval
+   ▼
+watch_poll job (per entry) ─► WatchMonitor.poll(entry)
+   │   re-collect public presence (telegram channel/group msgs, username platforms)
+   │   diff vs last_seen_marker {telegram_max_msg_id, platforms}
+   │   advance marker; stamp last_checked_at
+   ▼
+Activity[] ─► "NEW PUBLIC ACTIVITY" ─► Bot.send_message(user.telegram_user_id)
+```
+
+Only public sources; nothing here reads private content. `last_seen_marker`
+guarantees no duplicate notifications. Per-user cap
+(`RATE_LIMIT_WATCH_MAX_TARGETS`) enforced at add time.
+
 ## Entity resolution, graph & timeline (Phase 7)
 
 ```
