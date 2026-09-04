@@ -186,6 +186,56 @@ def render_username_osint(
     return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
 
 
+def render_job_queued(job_id: str, what: str) -> BotMessage:
+    return BotMessage(
+        text=(
+            f"⏳ *{what}* queued.\n\n"
+            f"Job `{job_id[:8]}` is running in the background — I'll send the "
+            f"results here when it finishes.\n\n"
+            f"_Cancel with_ `/cancel {job_id[:8]}` _(admins: /jobs to inspect)._"
+        ),
+        parse_mode="Markdown",
+        keyboard=BACK_TO_MENU,
+    )
+
+
+def render_jobs(rows: Sequence[Mapping[str, object]]) -> BotMessage:
+    if not rows:
+        return BotMessage(text="No jobs recorded.", keyboard=BACK_TO_MENU)
+    icon = {
+        "PENDING": "⏳",
+        "RUNNING": "▶️",
+        "COMPLETED": "✅",
+        "FAILED": "❌",
+        "CANCELLED": "🚫",
+    }
+    lines = ["*Recent jobs*", ""]
+    for r in rows:
+        state = str(r.get("state", ""))
+        prog = r.get("progress", 0)
+        lines.append(
+            f"{icon.get(state, '•')} `{str(r.get('id'))[:8]}` {r.get('kind')} — "
+            f"{state} {prog}%"
+            + (f" (retry {r.get('retry_count')})" if r.get("retry_count") else "")
+        )
+    return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+
+def render_stats(stats: Mapping[str, object]) -> BotMessage:
+    lines = ["*Usage statistics*", ""]
+    by_state = stats.get("jobs_by_state", {})
+    if isinstance(by_state, Mapping):
+        lines.append("Jobs by state:")
+        for k, v in by_state.items():
+            lines.append(f"  {k}: {v}")
+    lines.append("")
+    lines.append(f"Users: {stats.get('users', 0)}")
+    lines.append(f"Targets: {stats.get('targets', 0)}")
+    lines.append(f"Searches: {stats.get('searches', 0)}")
+    lines.append(f"Queue depth: {stats.get('queue_depth', 'n/a')}")
+    return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+
 def render_timeline(
     *, root_label: str, by_year: Mapping[str, Sequence[Mapping[str, object]]], truncated: bool
 ) -> BotMessage:

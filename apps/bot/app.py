@@ -42,6 +42,10 @@ _LIVE_HANDLERS = {
     "history": telegram_intel.history,
     # Phase 6: username OSINT
     "username": username_osint.username_osint,
+    # Phase 8: background jobs
+    "cancel": telegram_intel.cancel_cmd,
+    "jobs": admin.jobs_cmd,
+    "stats": admin.stats_cmd,
 }
 
 

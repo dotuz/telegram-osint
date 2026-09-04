@@ -35,19 +35,24 @@ def _cb_update(data: str, uid: int = 111):
 
 
 async def _seed_account(bot_db):
+    """Enqueue a search and drain the worker so an account entity exists."""
+    from tests.worker_helpers import CapturingRunner
+
+    runner = CapturingRunner(telegram=fake_collector())
     msg = SimpleNamespace(reply_text=AsyncMock())
     upd = SimpleNamespace(
         effective_user=SimpleNamespace(id=111, first_name="A"),
         effective_message=msg,
-        effective_chat=SimpleNamespace(send_action=AsyncMock()),
+        effective_chat=SimpleNamespace(id=1, send_action=AsyncMock()),
         callback_query=None,
     )
     ctx = SimpleNamespace(
         args=["@alice"],
-        application=SimpleNamespace(bot_data={"telegram_collector": fake_collector()}),
+        application=SimpleNamespace(bot_data={"job_queue": runner.queue}),
     )
     await telegram_intel.search_user(upd, ctx)
-    # dig the entity id out of the DB
+    runner.drain()
+
     from database.models import TelegramAccount
     from database.session import session_scope
 

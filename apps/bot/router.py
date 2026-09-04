@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Bump this as phases ship. A command is "live" once its phase has landed.
-CURRENT_PHASE = 6
+CURRENT_PHASE = 8
 
 
 @dataclass(frozen=True)
@@ -65,6 +65,7 @@ USER_COMMANDS: tuple[CommandSpec, ...] = (
         long_running=True,
     ),
     CommandSpec("history", "Your recent searches and reports", "/history", phase=4),
+    CommandSpec("cancel", "Cancel a queued/running job", "/cancel <job-id>", phase=8),
     CommandSpec("settings", "Your preferences", "/settings", phase=11),
 )
 

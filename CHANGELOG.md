@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.8.0] - 2026-09-04 — Phase 8: Background workers
+
+### Added
+- `workers/queue.py` — `JobQueue` abstraction: `RedisJobQueue` (list + delayed
+  sorted-set), `InMemoryJobQueue` (dev/tests); lazy process default with a
+  Redis→memory fallback so dev without Redis still works.
+- `workers/registry.py` — `@register(kind)` handler registry; `JobContext`
+  (session + `progress()`), `JobOutcome` (`summary` + optional `Notification`).
+- `workers/runner.py` — `JobRunner`: dequeue → `RUNNING` → dispatch → `COMPLETED`;
+  on error `FAILED` then re-enqueued `PENDING` with exponential backoff up to
+  `max_retries`; cancelled jobs skipped; per-progress-tick DB update; result
+  notification delivered to the originating chat. Loop-safe (`_run_sync`) so it
+  works from the worker (no loop) and from tests (pytest-asyncio loop).
+- `workers/handlers.py` — job handlers for `telegram_user` / `telegram_group` /
+  `telegram_channel` / `username_osint`, formatting results with the existing
+  view functions; `set_collector_overrides` for offline tests.
+- `workers/app.py` + `__main__.py` — `python -m workers`.
+- `apps/bot/jobs.py` — `submit_job`, `cancel_job`, `find_job_id` (prefix lookup).
+- Bot: `/search` `/user` `/group` `/channel` `/username` now **enqueue** and
+  reply "queued"; the worker delivers the result. New `/cancel <job-id>`;
+  admin `/jobs`, `/stats` live (`router.CURRENT_PHASE = 8`).
+  `/message` and `/history` stay synchronous (DB-only).
+- API: `GET /api/v1/jobs`, `GET /api/v1/jobs/{id}`, `POST /api/v1/jobs/{id}/cancel`.
+- 20 new tests (209 total): queue FIFO/delay/timeout, runner lifecycle +
+  retry/backoff + exhaustion + cancellation + loop-safety, handlers, bot
+  enqueue→worker→notification round-trip, `/cancel`, jobs API.
+
+### Changed
+- Job state machine allows `PENDING → FAILED` (unhandleable kind fails fast).
+- Existing bot handler tests updated for the async flow (`CapturingRunner`).
+
 ## [0.7.0] - 2026-09-04 — Phase 7: Entity resolution, graph, timeline
 
 ### Added

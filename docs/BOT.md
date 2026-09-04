@@ -43,11 +43,11 @@ surface is complete and discoverable without fabricating functionality.
 | `/whoami` | 2 ✅ | Your Telegram id + role |
 | `/admin` | 2 ✅ | Admin overview (admin only) |
 | `/health` | 2 ✅ | DB + Redis checks (admin only) |
-| `/search` `/user` | 4 ✅ | Public Telegram user search (via `TelegramIntelService`) |
-| `/group` `/channel` `/message` | 4 ✅ | Public Telegram intelligence |
-| `/history` | 4 ✅ | Recent searches |
-| `/username` | 6 | Username OSINT across public sources |
-| `/jobs` `/stats` | 8 | (admin) job + usage views |
+| `/search` `/user` `/group` `/channel` | 4 ✅ (Phase 8: enqueued) | Public Telegram intel — replies "queued", worker delivers the result |
+| `/message` `/history` | 4 ✅ | DB-only, synchronous |
+| `/username` | 6 ✅ (Phase 8: enqueued) | Username OSINT across public sources |
+| `/cancel` | 8 ✅ | Cancel a queued/running job by id prefix |
+| `/jobs` `/stats` | 8 ✅ | (admin) recent jobs / usage + queue depth |
 | `/watch` `/unwatch` | 9 | Watchlist |
 | `/report` | 10 | Async report generation |
 | `/settings` | 11 | User preferences |

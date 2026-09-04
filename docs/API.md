@@ -43,6 +43,9 @@ use and every search/result is scoped to it.
 | GET | `/api/v1/targets/{id}/timeline` | — | `{root, events[], by_year, truncated}` |
 | GET | `/api/v1/entities/{type}/{id}/graph` | `?depth=1..3` | shared-graph neighbourhood |
 | GET | `/api/v1/entities/{type}/{id}/timeline` | — | chronological events for one entity |
+| GET | `/api/v1/jobs` | `?limit` | recent background jobs |
+| GET | `/api/v1/jobs/{id}` | — | job detail (state, progress, params, result, timestamps) |
+| POST | `/api/v1/jobs/{id}/cancel` | — | `{cancelled: bool, state}` |
 
 `IntelResponse`: `{kind, found, entity_type, entity_id, summary, items, notes,
 search_id, source_available}`. When no Telegram source is configured,

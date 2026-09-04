@@ -40,6 +40,15 @@ def _reset_caches() -> Iterator[None]:
     yield
     get_settings.cache_clear()
     reset_engine_cache()
+    # Reset Phase-8 worker module state between tests.
+    try:
+        import workers.handlers as _wh
+        from workers.queue import set_default_queue
+
+        _wh.set_collector_overrides(telegram=None, username=None)
+        set_default_queue(None)
+    except Exception:  # noqa: BLE001 - workers not imported in this test
+        pass
 
 
 @pytest.fixture

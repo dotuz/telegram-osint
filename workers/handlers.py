@@ -1,0 +1,112 @@
+"""Built-in job handlers.
+
+Each handler runs one of the Phase 4–6 intelligence services and formats a
+Telegram-ready notification with the existing view functions. Collectors are
+overridable (``set_collector_overrides``) so worker tests run fully offline.
+"""
+
+from __future__ import annotations
+
+from apps.bot.intel_views import (
+    render_chat_intel,
+    render_user_intel,
+    render_username_osint,
+)
+from collectors.common.interfaces import Collector
+from collectors.telegram.collector import KIND_CHANNEL, KIND_GROUP, TelegramPublicCollector
+from intelligence.search import TelegramIntelService
+from intelligence.username_osint import UsernameOsintService
+from workers.registry import JobContext, JobOutcome, Notification, register
+
+_TG_COLLECTOR: Collector | None = None
+_USERNAME_COLLECTOR: Collector | None = None
+
+
+def set_collector_overrides(
+    *, telegram: Collector | None = None, username: Collector | None = None
+) -> None:
+    global _TG_COLLECTOR, _USERNAME_COLLECTOR
+    _TG_COLLECTOR = telegram
+    _USERNAME_COLLECTOR = username
+
+
+def _tg_collector() -> Collector:
+    return _TG_COLLECTOR or TelegramPublicCollector()
+
+
+def _notify(ctx: JobContext, text: str) -> Notification | None:
+    chat_id = ctx.params.get("chat_id")
+    return Notification(chat_id=chat_id, text=text) if chat_id is not None else None
+
+
+@register("telegram_user")
+async def run_telegram_user(ctx: JobContext) -> JobOutcome:
+    p = ctx.params
+    ctx.progress(10)
+    svc = TelegramIntelService(ctx.session, p["user_id"], collector=_tg_collector())
+    r = await svc.search_user(p["query"])
+    ctx.progress(90)
+    text = render_user_intel(
+        query=p["query"], found=r.found, summary=r.summary, notes=r.notes, entity_id=r.entity_id
+    ).text
+    return JobOutcome(
+        summary={"found": r.found, "entity_id": r.entity_id, "search_id": r.search_id},
+        notification=_notify(ctx, text),
+    )
+
+
+@register("telegram_group")
+async def run_telegram_group(ctx: JobContext) -> JobOutcome:
+    return await _run_chat(ctx, KIND_GROUP)
+
+
+@register("telegram_channel")
+async def run_telegram_channel(ctx: JobContext) -> JobOutcome:
+    return await _run_chat(ctx, KIND_CHANNEL)
+
+
+async def _run_chat(ctx: JobContext, kind: str) -> JobOutcome:
+    p = ctx.params
+    ctx.progress(10)
+    svc = TelegramIntelService(ctx.session, p["user_id"], collector=_tg_collector())
+    method = svc.group_intel if kind == KIND_GROUP else svc.channel_intel
+    r = await method(p["query"])
+    ctx.progress(90)
+    text = render_chat_intel(
+        kind=r.kind, query=p["query"], found=r.found, summary=r.summary, notes=r.notes
+    ).text
+    return JobOutcome(
+        summary={"found": r.found, "entity_id": r.entity_id},
+        notification=_notify(ctx, text),
+    )
+
+
+@register("username_osint")
+async def run_username_osint(ctx: JobContext) -> JobOutcome:
+    p = ctx.params
+    ctx.progress(10)
+    svc = UsernameOsintService(ctx.session, p["user_id"], collector=_USERNAME_COLLECTOR)
+    r = await svc.run(p["query"])
+    ctx.progress(90)
+    text = render_username_osint(
+        username=r.username,
+        found=r.found,
+        sources=[
+            {
+                "platform": s.platform,
+                "url": s.url,
+                "confidence": s.confidence,
+                "evidence": s.evidence,
+            }
+            for s in r.sources
+        ],
+        notes=r.notes,
+        disclaimer=r.disclaimer,
+    ).text
+    return JobOutcome(
+        summary={"found": r.found, "sources": len(r.sources), "target_id": r.target_id},
+        notification=_notify(ctx, text),
+    )
+
+
+__all__ = ["set_collector_overrides"]

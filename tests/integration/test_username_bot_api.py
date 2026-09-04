@@ -5,6 +5,8 @@ import pytest
 
 from apps.bot.handlers import username_osint as handler
 from tests.username_fixtures import alice_collector
+from tests.worker_helpers import CapturingRunner
+from workers.queue import InMemoryJobQueue
 
 pytestmark = pytest.mark.integration
 
@@ -21,9 +23,9 @@ def bot_db():
     Base.metadata.drop_all(engine)
 
 
-def _ctx(args, collector=None):
-    app = SimpleNamespace(bot_data={"username_collector": collector} if collector else {})
-    return SimpleNamespace(args=args, application=app)
+def _ctx(args, queue=None):
+    data = {"job_queue": queue} if queue is not None else {}
+    return SimpleNamespace(args=args, application=SimpleNamespace(bot_data=data))
 
 
 def _update(uid=111):
@@ -31,15 +33,19 @@ def _update(uid=111):
     return SimpleNamespace(
         effective_user=SimpleNamespace(id=uid, first_name="A"),
         effective_message=msg,
-        effective_chat=SimpleNamespace(send_action=AsyncMock()),
+        effective_chat=SimpleNamespace(id=777, send_action=AsyncMock()),
         callback_query=None,
     ), msg
 
 
-async def test_username_handler_lists_sources_with_disclaimer(bot_db):
+async def test_username_handler_enqueues_and_worker_delivers(bot_db):
+    runner = CapturingRunner(username=alice_collector())
     update, msg = _update()
-    await handler.username_osint(update, _ctx(["@alice"], alice_collector()))
-    text = msg.reply_text.call_args.args[0]
+    await handler.username_osint(update, _ctx(["@alice"], queue=runner.queue))
+    assert "queued" in msg.reply_text.call_args.args[0].lower()
+
+    runner.drain()
+    text = runner.notifications[0].text
     assert "Username OSINT" in text
     assert "github" in text and "telegram" in text
     assert "potential match" in text
@@ -49,13 +55,13 @@ async def test_username_handler_lists_sources_with_disclaimer(bot_db):
 
 async def test_username_handler_usage(bot_db):
     update, msg = _update()
-    await handler.username_osint(update, _ctx([]))
+    await handler.username_osint(update, _ctx([], queue=InMemoryJobQueue()))
     assert "Usage" in msg.reply_text.call_args.args[0]
 
 
 async def test_username_handler_denied(bot_db):
     update, msg = _update(uid=999)
-    await handler.username_osint(update, _ctx(["@alice"], alice_collector()))
+    await handler.username_osint(update, _ctx(["@alice"], queue=InMemoryJobQueue()))
     assert "not authorized" in msg.reply_text.call_args.args[0].lower()
 
 

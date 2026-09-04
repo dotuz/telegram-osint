@@ -16,7 +16,7 @@ from database.models.job import Job, JobState
 from database.repositories.base import BaseRepository
 
 _ALLOWED: dict[JobState, set[JobState]] = {
-    JobState.PENDING: {JobState.RUNNING, JobState.CANCELLED},
+    JobState.PENDING: {JobState.RUNNING, JobState.CANCELLED, JobState.FAILED},
     JobState.RUNNING: {JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED, JobState.PENDING},
     JobState.COMPLETED: set(),
     JobState.FAILED: {JobState.PENDING},  # retry

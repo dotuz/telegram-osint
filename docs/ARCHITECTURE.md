@@ -107,6 +107,30 @@ Bios/descriptions get a lighter pass (`enrich_entity_text`) →
 `IocService` (per message, per container, recent). Every IOC keeps its evidence;
 nothing is inferred without a source reference.
 
+## Background jobs (Phase 8)
+
+```
+bot handler (/search, /username, …)
+   │  submit_job(kind, params={query, user_id, chat_id})
+   ▼
+Job row (PENDING) ──enqueue──► queue (Redis list / in-memory)
+                                   │  worker: dequeue
+                                   ▼
+                            JobRunner._process
+                              RUNNING ─► handler (fresh session, progress ticks)
+                                 │
+                       ok ──► COMPLETED (+ result summary)
+                       err ─► FAILED ─► PENDING (re-enqueue, backoff 5·2ⁿ s) up to max_retries
+                                   │
+                                   ▼
+                        Notification ─► Bot.send_message(chat_id, rendered result)
+```
+
+The bot never blocks: a long command replies "queued" immediately.
+Cancellation (`/cancel`, `POST /jobs/{id}/cancel`) sets `CANCELLED`; the runner
+skips it before pickup and after completion. `/message` and `/history` stay
+synchronous (DB-only).
+
 ## Entity resolution, graph & timeline (Phase 7)
 
 ```
