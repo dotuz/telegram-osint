@@ -41,3 +41,4 @@ dist-dashboard/
 Thumbs.db
 .idea/
 .vscode/
+reports_output/

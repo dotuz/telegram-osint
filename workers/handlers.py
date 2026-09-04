@@ -113,6 +113,40 @@ async def run_username_osint(ctx: JobContext) -> JobOutcome:
     )
 
 
+@register("report_generate")
+async def run_report_generate(ctx: JobContext) -> JobOutcome:
+    from reports.service import generate_report
+
+    p = ctx.params
+    ctx.progress(15)
+    result = generate_report(ctx.session, p["report_id"], formats=p.get("formats"))
+    ctx.progress(95)
+
+    chat_id = p.get("chat_id")
+    notification = None
+    if chat_id is not None:
+        fmts = ", ".join(sorted(result.artifacts)) or "none"
+        if result.status == "COMPLETED":
+            text = (
+                f"*Report ready* ({result.section_count} sections, formats: {fmts}).\n\n"
+                f"{result.summary or ''}\n\n"
+                f"_Download: /report list or the API "
+                f"(`/api/v1/reports/{result.report_id[:8]}…/download?fmt=json`)._"
+            )
+        else:
+            text = "Report generation failed. " + "; ".join(result.notes)
+        notification = Notification(chat_id=chat_id, text=text)
+
+    return JobOutcome(
+        summary={
+            "status": result.status,
+            "artifacts": list(result.artifacts),
+            "sections": result.section_count,
+        },
+        notification=notification,
+    )
+
+
 @register("watch_poll")
 async def run_watch_poll(ctx: JobContext) -> JobOutcome:
     wid = ctx.params["watchlist_id"]

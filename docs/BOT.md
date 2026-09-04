@@ -49,7 +49,7 @@ surface is complete and discoverable without fabricating functionality.
 | `/cancel` | 8 ✅ | Cancel a queued/running job by id prefix |
 | `/jobs` `/stats` | 8 ✅ | (admin) recent jobs / usage + queue depth |
 | `/watch` `/unwatch` `/watchlist` | 9 ✅ | Monitor public handles; worker polls every `WATCH_POLL_INTERVAL_SECONDS` and DMs "NEW PUBLIC ACTIVITY". Capped by `RATE_LIMIT_WATCH_MAX_TARGETS` |
-| `/report` | 10 | Async report generation |
+| `/report @username` · `/report list` | 10 ✅ | Async 15-section report (JSON/HTML/PDF); worker DMs a summary, download via the API |
 | `/settings` | 11 | User preferences |
 | `/audit` `/users` | 12 | (admin) audit log, user management |
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Bump this as phases ship. A command is "live" once its phase has landed.
-CURRENT_PHASE = 9
+CURRENT_PHASE = 10
 
 
 @dataclass(frozen=True)
@@ -60,8 +60,8 @@ USER_COMMANDS: tuple[CommandSpec, ...] = (
     CommandSpec("watchlist", "Show your monitored handles", "/watchlist", phase=9),
     CommandSpec(
         "report",
-        "Generate an intelligence report",
-        "/report @username",
+        "Generate an intelligence report (JSON/HTML/PDF)",
+        "/report @username | /report list",
         phase=10,
         long_running=True,
     ),

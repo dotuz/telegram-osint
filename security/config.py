@@ -92,6 +92,9 @@ class Settings(BaseSettings):
     # --- Monitoring / watchlist ---
     watch_poll_interval_seconds: int = 300
 
+    # --- Reports ---
+    reports_dir: str = "./reports_output"
+
     # ------------------------------------------------------------------
     # validators / normalisation
     # ------------------------------------------------------------------

@@ -9,6 +9,7 @@ services are configured.
 from __future__ import annotations
 
 import os
+import tempfile
 from collections.abc import Iterator
 
 import pytest
@@ -26,6 +27,7 @@ os.environ.update(
     CORS_ALLOWED_ORIGINS="http://localhost:3000",
     TELEGRAM_ALLOWED_USER_IDS="111,222",
     TELEGRAM_ADMIN_USER_IDS="111",
+    REPORTS_DIR=tempfile.mkdtemp(prefix="toi-reports-"),
 )
 
 

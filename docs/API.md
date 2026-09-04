@@ -49,6 +49,9 @@ use and every search/result is scoped to it.
 | GET · POST | `/api/v1/watchlist` | POST `{value, sources?}` | list / add (`429` on `RATE_LIMIT_WATCH_MAX_TARGETS`) |
 | DELETE | `/api/v1/watchlist/{value}` | — | `{removed: bool}` |
 | POST | `/api/v1/watchlist/{id}/poll` | — | run a poll now → `{target, activities[], notes}` |
+| GET · POST | `/api/v1/reports` | POST `{value \| target_id, formats?}` | list / create + generate (15 sections, evidence-linked) |
+| GET | `/api/v1/reports/{id}` | — | status + parsed `content` |
+| GET | `/api/v1/reports/{id}/download` | `?fmt=json\|html\|pdf` | artifact file (or stored content fallback) |
 
 `IntelResponse`: `{kind, found, entity_type, entity_id, summary, items, notes,
 search_id, source_available}`. When no Telegram source is configured,

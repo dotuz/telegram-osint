@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.10.0] - 2026-09-04 — Phase 10: Reports
+
+### Added
+- `reports/models.py` — `ReportContent` = the 15 spec sections in order, each a
+  list of `Claim` (text + `FACT`/`INFERENCE`/`UNKNOWN` + `evidence_refs` +
+  optional confidence) plus structured `data`.
+- `reports/builder.py` — `ReportBuilder.build(report_id, target)`: assembles all
+  15 sections from the graph / timeline / IOC / evidence layers, scoped to the
+  target's resolved entities. Every material fact carries the ids of the
+  `evidence` rows behind it; missing data is stated as `UNKNOWN`, never guessed.
+- `reports/renderers/` — `render_json` (canonical), `render_html` (standalone,
+  inline CSS, **every dynamic string HTML-escaped**), `render_pdf` (fpdf2, pure
+  Python, `wrapmode="CHAR"` for long tokens; degrades if fpdf2 absent).
+- `reports/service.py` — `generate_report(session, report_id, formats)`:
+  build → render → write `REPORTS_DIR/<id>/report.{json,html,pdf}` → update the
+  `Report` row (`content_json`, `artifacts_json`, `summary`, status).
+- `workers/handlers.py::report_generate` — job handler; DMs a summary + download
+  hint.
+- Bot: `/report @username` (async job) and `/report list` live
+  (`router.CURRENT_PHASE = 10`).
+- API: `GET/POST /api/v1/reports`, `GET /api/v1/reports/{id}`,
+  `GET /api/v1/reports/{id}/download?fmt=json|html|pdf` (FileResponse, falls back
+  to stored content).
+- `fpdf2` dependency; `REPORTS_DIR` setting (default `./reports_output`).
+- 18 new tests (242 total): 15-section order, evidence-backed claims,
+  UNKNOWN-not-guess, disclaimer language, HTML XSS-escaping, PDF magic bytes,
+  service artifacts + row update + no-target failure, `report_generate` job +
+  notification, bot `/report` (+list) + usage + denial, full API lifecycle +
+  isolation.
+
 ## [0.9.0] - 2026-09-04 — Phase 9: Watchlist / monitoring
 
 ### Added

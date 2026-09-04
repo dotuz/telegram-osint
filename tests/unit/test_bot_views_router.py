@@ -39,8 +39,9 @@ def test_render_help_hides_admin_commands_from_non_admin():
 
 def test_help_lines_marks_unreleased_phases():
     lines = dict(help_lines(is_admin=True))
-    assert "phase" in lines["report"]  # phase 10
+    assert "phase" in lines["settings"]  # phase 11, not shipped
     assert "phase" not in lines["start"]  # live
+    assert "phase" not in lines["report"]  # phase 10, shipped
 
 
 def test_render_stub_mentions_phase_and_usage():

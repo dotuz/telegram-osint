@@ -12,7 +12,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.middleware import RequestContextMiddleware
-from apps.api.routers import graph, health, intel, iocs, jobs, username, watchlist
+from apps.api.routers import (
+    graph,
+    health,
+    intel,
+    iocs,
+    jobs,
+    reports,
+    username,
+    watchlist,
+)
 from collectors.bootstrap import register_default_collectors
 from security.config import Settings, get_settings
 from security.logging import configure_logging, get_logger
@@ -62,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(graph.router, prefix="/api/v1")
     app.include_router(jobs.router, prefix="/api/v1")
     app.include_router(watchlist.router, prefix="/api/v1")
+    app.include_router(reports.router, prefix="/api/v1")
 
     return app
 

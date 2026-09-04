@@ -131,6 +131,24 @@ Cancellation (`/cancel`, `POST /jobs/{id}/cancel`) sets `CANCELLED`; the runner
 skips it before pickup and after completion. `/message` and `/history` stay
 synchronous (DB-only).
 
+## Reports (Phase 10)
+
+```
+/report @x  ─►  Report row + resolved Target  ─►  report_generate job
+                                                     │
+                              ReportBuilder.build() ─┤ 15 sections, evidence-linked claims
+                                                     ▼
+                          render_json / render_html (escaped) / render_pdf (fpdf2)
+                                                     ▼
+                    REPORTS_DIR/<id>/report.{json,html,pdf}  +  Report.content_json
+                                                     ▼
+                              DM summary  ·  GET /api/v1/reports/{id}/download?fmt=
+```
+
+Every material claim is tagged `FACT` / `INFERENCE` / `UNKNOWN` and carries the
+`evidence` ids that support it. Unknown data is reported as `UNKNOWN`, never
+fabricated. HTML output escapes all collected text.
+
 ## Watchlist monitoring (Phase 9)
 
 ```

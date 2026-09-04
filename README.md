@@ -26,8 +26,8 @@ Telegram information and other **public** OSINT sources.
 | 7 | Entity resolution, graph, timeline | ✅ done |
 | 8 | Background workers (Redis jobs, retries, cancellation) | ✅ done |
 | 9 | Watchlist / monitoring | ✅ done |
-| 10 | Reports (PDF / HTML / JSON) | ⛏ next |
-| 11 | Web dashboard (Next.js) | ☐ |
+| 10 | Reports (PDF / HTML / JSON) | ✅ done |
+| 11 | Web dashboard (Next.js) | ⛏ next |
 | 12 | Security hardening (RBAC, CSRF, CORS, SSRF, rate limits, IDOR) | ☐ |
 | 13 | Final QA | ☐ |
 

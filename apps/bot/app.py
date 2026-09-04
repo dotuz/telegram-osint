@@ -22,6 +22,7 @@ from apps.bot.handlers import (
     admin,
     common,
     graph_views,
+    report,
     telegram_intel,
     username_osint,
     watchlist,
@@ -57,6 +58,8 @@ _LIVE_HANDLERS = {
     "watch": watchlist.watch_cmd,
     "unwatch": watchlist.unwatch_cmd,
     "watchlist": watchlist.watchlist_cmd,
+    # Phase 10: reports
+    "report": report.report_cmd,
 }
 
 
