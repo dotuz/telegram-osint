@@ -28,6 +28,7 @@ os.environ.update(
     TELEGRAM_ALLOWED_USER_IDS="111,222",
     TELEGRAM_ADMIN_USER_IDS="111",
     REPORTS_DIR=tempfile.mkdtemp(prefix="toi-reports-"),
+    RATE_LIMIT_ENABLED="false",
 )
 
 
@@ -50,6 +51,13 @@ def _reset_caches() -> Iterator[None]:
         _wh.set_collector_overrides(telegram=None, username=None)
         set_default_queue(None)
     except Exception:  # noqa: BLE001 - workers not imported in this test
+        pass
+    # Reset the Phase-12 rate limiter between tests.
+    try:
+        from security.ratelimit import set_rate_limiter
+
+        set_rate_limiter(None)
+    except Exception:  # noqa: BLE001
         pass
 
 

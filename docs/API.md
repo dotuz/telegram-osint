@@ -21,16 +21,39 @@ Readiness. Checks database + Redis. `200` when all healthy, `503` otherwise.
 { "ready": false, "checks": { "database": "ok", "redis": "error" } }
 ```
 
-## Authentication (Phase 11)
+## Authentication
 
-- `POST /api/v1/auth/login` `{email, password}` → `{access_token, expires_in, user}`.
-- Send it as `Authorization: Bearer <token>` on every request. `GET
-  /api/v1/auth/me` returns the current user. Tokens are HMAC-signed, short-lived
-  (`ACCESS_TOKEN_TTL_SECONDS`); refresh-token rotation is Phase 12.
+- `POST /api/v1/auth/login` `{email, password}` →
+  `{access_token, token_type, expires_in, refresh_token, user}`. Also sets a
+  `toi_refresh` cookie (`HttpOnly; Secure; SameSite=Strict`, path
+  `/api/v1/auth`). Rate-limited per IP (`RATE_LIMIT_LOGIN_PER_MINUTE`).
+- Send the access token as `Authorization: Bearer <token>` on every request.
+  `GET /api/v1/auth/me` returns the current user. Tokens are HMAC-signed,
+  short-lived (`ACCESS_TOKEN_TTL_SECONDS`). A malformed token → `401`.
+- `POST /api/v1/auth/refresh` — body `{refresh_token?}` or the `toi_refresh`
+  cookie → a fresh `{access_token, refresh_token}` and rotates the cookie.
+  **Single-use**: the old token is revoked. Replaying a spent token → `401` and
+  revokes every refresh token for that user (theft response).
+- `POST /api/v1/auth/logout` — revokes the presented refresh token and clears
+  the cookie.
 - Create users with `python -m apps.api create-user <email> [--admin]`.
 - **Dev shim** (kept for local dev + the test suite, **401 in production**):
   `X-User-Email` identifies/creates a user; `X-User-Role: ADMIN` elevates.
 - `GET /api/v1/stats` — dashboard counts. `GET /api/v1/audit` — audit log (ADMIN).
+
+### Rate limiting & 429
+
+Search, username, and report endpoints are rate-limited per authenticated
+principal (with a wider per-IP backstop). Over the limit → `429 Too Many
+Requests` with `Retry-After` and `X-RateLimit-Limit` headers. Disable entirely
+with `RATE_LIMIT_ENABLED=false`.
+
+### Browser / CSRF
+
+State-changing requests (`POST/PUT/PATCH/DELETE`) carrying an `Origin` header not
+in `CORS_ALLOWED_ORIGINS` are rejected with `403` (`ENFORCE_ORIGIN_CHECK`).
+Responses carry `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and a
+strict CSP.
 
 Every target / search / watchlist / report is scoped to the resolved user.
 

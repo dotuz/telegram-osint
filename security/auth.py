@@ -12,6 +12,7 @@ minimum real auth the dashboard needs.
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -62,6 +63,19 @@ class TokenError(Exception):
     """Invalid, malformed, or expired token."""
 
 
+# --------------------------------------------------------------------------- refresh
+
+
+def new_refresh_token() -> tuple[str, str]:
+    """Return ``(raw, sha256_hex)``. Store the hash, hand the client the raw value."""
+    raw = secrets.token_urlsafe(48)
+    return raw, hash_refresh_token(raw)
+
+
+def hash_refresh_token(raw: str) -> str:
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def create_access_token(*, user_id: str, role: str, ttl_seconds: int | None = None) -> str:
     settings = get_settings()
     ttl = ttl_seconds or settings.access_token_ttl_seconds
@@ -79,11 +93,15 @@ def decode_access_token(token: str) -> dict:
     except ValueError as exc:
         raise TokenError("malformed token") from exc
     signing_input = f"{header_b64}.{payload_b64}"
-    if not hmac.compare_digest(_sign(signing_input), _unb64(sig_b64)):
+    try:
+        sig_ok = hmac.compare_digest(_sign(signing_input), _unb64(sig_b64))
+    except (ValueError, TypeError, binascii.Error) as exc:
+        raise TokenError("malformed signature") from exc
+    if not sig_ok:
         raise TokenError("bad signature")
     try:
         payload = json.loads(_unb64(payload_b64))
-    except (ValueError, TypeError) as exc:
+    except (ValueError, TypeError, binascii.Error) as exc:
         raise TokenError("bad payload") from exc
     if int(payload.get("exp", 0)) < int(time.time()):
         raise TokenError("expired")

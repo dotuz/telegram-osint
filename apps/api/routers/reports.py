@@ -12,12 +12,21 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api.deps import Principal, current_user, db_session, resolve_user
+from apps.api.security import rate_limit
 from database.repositories import ReportRepository, TargetRepository
 from database.types import TargetKind
 from intelligence.entity_resolution import TargetResolver
 from reports.service import generate_report
 
-router = APIRouter(tags=["reports"], prefix="/reports")
+router = APIRouter(
+    tags=["reports"],
+    prefix="/reports",
+    dependencies=[
+        Depends(
+            rate_limit("reports", limit_setting="rate_limit_reports_per_hour", window_seconds=3600)
+        )
+    ],
+)
 
 SessionDep = Annotated[Session, Depends(db_session)]
 UserDep = Annotated[Principal, Depends(current_user)]

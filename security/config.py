@@ -85,9 +85,19 @@ class Settings(BaseSettings):
     http_fetch_allow_private: bool = False
 
     # --- Rate limits ---
+    rate_limit_enabled: bool = True
     rate_limit_search_per_minute: int = 10
     rate_limit_reports_per_hour: int = 5
     rate_limit_watch_max_targets: int = 25
+    rate_limit_api_per_minute: int = 120
+    rate_limit_login_per_minute: int = 8
+    # Per-IP backstop = per-principal limit * this factor (so a shared NAT / proxy
+    # does not let one user's quota starve everyone else behind the same address).
+    rate_limit_ip_burst_multiplier: int = 20
+
+    # --- Browser security ---
+    # State-changing requests whose Origin is set must match an allowed origin.
+    enforce_origin_check: bool = True
 
     # --- Monitoring / watchlist ---
     watch_poll_interval_seconds: int = 300

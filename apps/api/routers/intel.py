@@ -9,11 +9,15 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api.deps import Principal, current_user, db_session, get_collector, resolve_user
+from apps.api.security import rate_limit
 from collectors.common.interfaces import Collector
 from collectors.common.registry import registry
 from intelligence.search import IntelResult, TelegramIntelService
 
-router = APIRouter(tags=["telegram-intel"])
+router = APIRouter(
+    tags=["telegram-intel"],
+    dependencies=[Depends(rate_limit("search", limit_setting="rate_limit_search_per_minute"))],
+)
 
 SessionDep = Annotated[Session, Depends(db_session)]
 UserDep = Annotated[Principal, Depends(current_user)]

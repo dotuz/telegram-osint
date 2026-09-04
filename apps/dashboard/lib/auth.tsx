@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    void api.logout();
     setToken(null);
     setUser(null);
   };

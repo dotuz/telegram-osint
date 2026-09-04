@@ -28,8 +28,8 @@ Telegram information and other **public** OSINT sources.
 | 9 | Watchlist / monitoring | ✅ done |
 | 10 | Reports (PDF / HTML / JSON) | ✅ done |
 | 11 | Web dashboard (Next.js) + token auth + RBAC | ✅ done |
-| 12 | Security hardening (CSRF, CORS, rate limits, IDOR, refresh tokens) | ⛏ next |
-| 13 | Final QA | ☐ |
+| 12 | Security hardening (CSRF, CORS, rate limits, IDOR, refresh tokens) | ✅ done |
+| 13 | Final QA | ⛏ next |
 
 ## Architecture (short)
 

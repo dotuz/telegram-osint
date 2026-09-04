@@ -30,9 +30,31 @@ export class ApiError extends Error {
   }
 }
 
+async function tryRefresh(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/v1/auth/refresh", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+      cache: "no-store",
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data.access_token) {
+      setToken(data.access_token);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  return false;
+}
+
 async function request<T>(
   path: string,
   opts: { method?: string; body?: unknown; query?: Record<string, unknown> } = {},
+  retry = true,
 ): Promise<T> {
   const url = new URL(`/api/v1${path}`, window.location.origin);
   for (const [k, v] of Object.entries(opts.query ?? {})) {
@@ -45,9 +67,14 @@ async function request<T>(
   const res = await fetch(url.toString(), {
     method: opts.method ?? "GET",
     headers,
+    credentials: "include",
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     cache: "no-store",
   });
+
+  if (res.status === 401 && retry && !path.startsWith("/auth/")) {
+    if (await tryRefresh()) return request<T>(path, opts, false);
+  }
 
   if (res.status === 204) return undefined as T;
   const text = await res.text();
@@ -133,6 +160,8 @@ export const api = {
       body: { email, password },
     }),
   me: () => request<Me>("/auth/me"),
+  logout: () =>
+    fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" }).catch(() => {}),
 
   stats: () => request<Record<string, any>>("/stats"),
   audit: (limit = 100) => request<{ audit: any[] }>("/audit", { query: { limit } }),

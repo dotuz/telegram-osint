@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.12.0] - 2026-09-04 — Phase 12: Security hardening
+
+### Added
+- `security/ratelimit.py` — sliding-window rate limiter, Redis-backed
+  (`zremrangebyscore`/`zadd`/`zcard` pipeline) with an in-memory fallback.
+  `RATE_LIMIT_ENABLED` master switch (off in tests).
+- `apps/api/security.py` — three HTTP defences:
+  - `SecurityHeadersMiddleware` — `X-Content-Type-Options`, `X-Frame-Options: DENY`,
+    `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+    CSP `default-src 'none'; frame-ancestors 'none'; …`, plus HSTS in production.
+  - `OriginCheckMiddleware` — rejects a state-changing request whose `Origin` is
+    present but not in `CORS_ALLOWED_ORIGINS` (403). No-Origin requests pass.
+  - `rate_limit(bucket, …)` / `login_rate_limit` dependencies — per-principal
+    quota + a wide per-IP backstop (`* RATE_LIMIT_IP_BURST_MULTIPLIER`), so a
+    shared NAT never lets one user starve another. 429 + `Retry-After`.
+- Rotating refresh tokens:
+  - `database/models/refresh_token.py` + `database/repositories/refresh_tokens.py`
+    (`issue` / `rotate` / `revoke` / `revoke_all`). Only the SHA-256 hash is
+    stored; rotation is single-use; replaying a spent token revokes the whole
+    family (`RefreshTokenReuseError`).
+  - migration `0003_refresh_tokens`.
+  - `POST /api/v1/auth/refresh` — reads the token from the body or the
+    `toi_refresh` cookie (`HttpOnly; Secure; SameSite=Strict`, path
+    `/api/v1/auth`). `login` now also sets that cookie; `logout` revokes it.
+- `security/auth.py` — `new_refresh_token()` / `hash_refresh_token()`; token
+  decode now maps `binascii.Error` to `TokenError` (malformed tokens → 401,
+  never 500).
+- `tests/security/` suite (32 tests): `test_idor_bola.py`, `test_auth_hardening.py`,
+  `test_rate_limiting.py`, `test_headers_origin_csrf.py`, `test_refresh_rotation.py`,
+  `test_injection.py`. 284 tests total.
+- Settings: `RATE_LIMIT_ENABLED`, `RATE_LIMIT_API_PER_MINUTE`,
+  `RATE_LIMIT_LOGIN_PER_MINUTE`, `RATE_LIMIT_IP_BURST_MULTIPLIER`,
+  `ENFORCE_ORIGIN_CHECK`.
+
+### Changed
+- `apps/api/routers/jobs.py` — jobs are now scoped to their requester
+  (`user:<id>` / `telegram:<id>`); non-owners get 404, admins see all.
+- `apps/api/routers/{intel,username,reports}.py` — router-level rate-limit
+  dependencies.
+- Dashboard `lib/api.ts` — transparent refresh: a 401 on a non-auth path triggers
+  one `POST /auth/refresh` (`credentials: "include"`) then a single retry.
+- `RefreshToken.is_active` normalises SQLite's tz-naive round-trip before compare.
+
+### Security
+- Fixes the pre-Phase-12 gap where a job ID from another requester was readable.
+- Malformed bearer tokens previously raised an unhandled `binascii.Error` (500);
+  now a clean 401.
+
 ## [0.11.0] - 2026-09-04 — Phase 11: Web dashboard + auth
 
 ### Added — backend

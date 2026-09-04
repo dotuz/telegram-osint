@@ -1,7 +1,8 @@
 """FastAPI application factory.
 
-Phase 1: bootstrapping, config-driven CORS, request context, health probes.
-Auth/RBAC, CSRF, rate limiting, and domain routers land in later phases.
+Middleware order (outermost first): security headers, Origin check, CORS,
+request context. Auth is per-route (``current_user``); rate limits are per-route
+dependencies (``rate_limit(...)``).
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from apps.api.routers import (
     username,
     watchlist,
 )
+from apps.api.security import OriginCheckMiddleware, SecurityHeadersMiddleware
 from collectors.bootstrap import register_default_collectors
 from security.config import Settings, get_settings
 from security.logging import configure_logging, get_logger
@@ -64,6 +66,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_age=600,
     )
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(OriginCheckMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     app.include_router(health.router)
     app.include_router(auth.router, prefix="/api/v1")

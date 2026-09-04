@@ -49,21 +49,32 @@ def _make_job(kind="telegram_user"):
         return job.id
 
 
+ADMIN = {"X-User-Role": "ADMIN"}
+
+
+def test_jobs_are_scoped_to_the_caller(client):
+    jid = _make_job()  # requested_by="telegram:1", not the dev caller
+    assert client.get("/api/v1/jobs").json()["jobs"] == []
+    assert client.get(f"/api/v1/jobs/{jid}").status_code == 404
+    # admin sees everything
+    assert any(j["id"] == jid for j in client.get("/api/v1/jobs", headers=ADMIN).json()["jobs"])
+
+
 def test_jobs_api_list_get_cancel(client):
     jid = _make_job()
 
-    listing = client.get("/api/v1/jobs").json()["jobs"]
+    listing = client.get("/api/v1/jobs", headers=ADMIN).json()["jobs"]
     assert any(j["id"] == jid for j in listing)
 
-    detail = client.get(f"/api/v1/jobs/{jid}").json()
+    detail = client.get(f"/api/v1/jobs/{jid}", headers=ADMIN).json()
     assert detail["kind"] == "telegram_user"
     assert detail["state"] == "PENDING"
     assert detail["params"]["query"] == "x"
 
-    cancelled = client.post(f"/api/v1/jobs/{jid}/cancel").json()
+    cancelled = client.post(f"/api/v1/jobs/{jid}/cancel", headers=ADMIN).json()
     assert cancelled == {"cancelled": True, "state": "CANCELLED"}
 
-    again = client.post(f"/api/v1/jobs/{jid}/cancel").json()
+    again = client.post(f"/api/v1/jobs/{jid}/cancel", headers=ADMIN).json()
     assert again["cancelled"] is False
 
-    assert client.get("/api/v1/jobs/nope").status_code == 404
+    assert client.get("/api/v1/jobs/nope", headers=ADMIN).status_code == 404

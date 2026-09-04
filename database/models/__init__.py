@@ -20,6 +20,7 @@ from database.models.ioc import IOC
 from database.models.job import Job, JobState
 from database.models.message import Message
 from database.models.network import IP, URL, Domain
+from database.models.refresh_token import RefreshToken
 from database.models.relationship import Relationship
 from database.models.report import Report
 from database.models.search import Search, SearchResult
@@ -40,6 +41,7 @@ __all__ = [
     "Job",
     "JobState",
     "Message",
+    "RefreshToken",
     "Relationship",
     "Report",
     "Search",

@@ -38,6 +38,10 @@ from database.repositories.investigations import (
 )
 from database.repositories.jobs import IllegalJobStateTransition, JobRepository
 from database.repositories.messages import MessageRepository
+from database.repositories.refresh_tokens import (
+    RefreshTokenRepository,
+    RefreshTokenReuseError,
+)
 from database.repositories.relationships import RelationshipRepository
 from database.repositories.users import UserRepository
 
@@ -51,6 +55,8 @@ __all__ = [
     "IllegalJobStateTransition",
     "JobRepository",
     "MessageRepository",
+    "RefreshTokenRepository",
+    "RefreshTokenReuseError",
     "RelationshipRepository",
     "ReportRepository",
     "ScopedRepository",
