@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.7.0] - 2026-09-04 — Phase 7: Entity resolution, graph, timeline
+
+### Added
+- `intelligence/entity_resolution/` — `TargetResolver` links a user's `Target`
+  to the matching shared-graph entities (`TARGET_IS_ACCOUNT` /
+  `TARGET_HAS_USERNAME`) with evidence, idempotently; `merge_entities()` repoints
+  every relationship / message / evidence reference from a dropped entity onto
+  the survivor (self-loops and duplicate edges collapsed).
+- `database/models/evidence.py::allow_evidence_repointing()` — the one sanctioned
+  evidence mutation (only `entity_id`/`entity_type`, only during a merge); the
+  immutability guard now diffs changed attributes and rejects everything else.
+- `intelligence/relationships/graph.py` — `GraphService`: bounded BFS
+  neighbourhood (depth ≤ 3, node cap, edges pruned to the node set), node
+  hydration with labels, `for_target()`.
+- `intelligence/timeline/builder.py` — `TimelineService`: events from evidence
+  (`observed_at`), messages (`posted_at`), relationships (`first_seen`), account
+  first-observed; sorted, tz-normalised, grouped `by_year`.
+- Search/username services now create + resolve a `Target` (`summary.target_id`
+  / `result.target_id`).
+- API: `GET/POST /api/v1/targets`, `GET /api/v1/targets/{id}`,
+  `GET /api/v1/targets/{id}/{graph,timeline}`,
+  `GET /api/v1/entities/{type}/{id}/{graph,timeline}`.
+- Bot: `intel:timeline:<id>` / `intel:graph:<id>` callback (the buttons on a
+  user-search result) rendered as text summaries with a dashboard pointer.
+- 21 new tests (197 total): graph BFS/caps/hydration, timeline event kinds/
+  ordering/year grouping, target resolution + idempotency, merge repointing +
+  cross-type rejection + immutability-still-enforced, API, bot callbacks.
+
 ## [0.6.0] - 2026-09-04 — Phase 6: Username OSINT
 
 ### Added

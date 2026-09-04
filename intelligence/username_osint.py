@@ -16,7 +16,7 @@ from collectors.common.interfaces import Collector, CollectRequest, NormalizedRe
 from collectors.username.collector import KIND_USERNAME, UsernameOsintCollector
 from database.normalize import normalize_username
 from database.repositories import EvidenceRepository, RelationshipRepository, SearchRepository
-from database.types import EntityType, RelationshipType, SearchKind, TaskStatus
+from database.types import EntityType, RelationshipType, SearchKind, TargetKind, TaskStatus
 from intelligence.confidence import IdentityFacts, score_account, score_pair
 from intelligence.ingest import IngestionService
 from security.logging import get_logger
@@ -46,6 +46,7 @@ class UsernameOsintResult:
     same_as_edges: list[dict] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     search_id: str | None = None
+    target_id: str | None = None
     disclaimer: str = (
         "A matching username is not proof of a shared identity. Each result is a "
         "potential match supported only by the public evidence listed."
@@ -120,6 +121,9 @@ class UsernameOsintService:
 
         out.same_as_edges = self._link_same_as(account_recs, facts, summary)
 
+        if out.sources:
+            out.target_id = self._link_target(handle, account_recs, summary)
+
         out.sources.sort(key=lambda s: -s.confidence)
         out.found = bool(out.sources)
         if db_results:
@@ -131,6 +135,22 @@ class UsernameOsintService:
         return out
 
     # ------------------------------------------------------------------ internals
+    def _link_target(self, handle: str, account_recs, summary) -> str | None:  # noqa: ANN001
+        from database.repositories import TargetRepository
+        from intelligence.entity_resolution import TargetResolver
+
+        target, _ = TargetRepository(self.session, self.user_id).get_or_create(
+            kind=TargetKind.USERNAME, value=handle
+        )
+        self.session.flush()
+        resolver = TargetResolver(self.session)
+        resolver.resolve(target)  # links Username entity + any accounts by handle
+        for rec in account_recs:
+            eid = summary.entity_id(rec.ref)
+            if eid:
+                resolver.link(target.id, rec.entity_type, eid, confidence=60)
+        return target.id
+
     def _record_correlation_evidence(
         self, entity_type: str, entity_id: str, line: str, score: int
     ) -> None:

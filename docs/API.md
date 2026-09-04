@@ -37,6 +37,12 @@ use and every search/result is scoped to it.
 | GET | `/api/v1/sources/health` | — | `{sources: [{name, healthy, detail}]}` |
 | GET | `/api/v1/iocs` | `?message_id` \| `?entity_type&entity_id` \| `?ioc_type` \| (recent) | `{iocs: [{id, ioc_type, value, times_observed, linked_entity_*, evidence_count}]}` |
 | POST | `/api/v1/username` | `{username}` | `{username, found, sources: [{platform, url, confidence, evidence[]}], same_as_edges, notes, disclaimer}` — `confidence` is correlation (0–100); every response carries a "not proof of a shared identity" disclaimer |
+| GET · POST | `/api/v1/targets` | POST `{kind, value, label?}` | list / create + resolve a target (scoped to the caller) |
+| GET | `/api/v1/targets/{id}` | — | `{id, kind, value, label, resolved_entities[]}` |
+| GET | `/api/v1/targets/{id}/graph` | `?depth=1..3` | `{root, nodes[], edges[], truncated}` |
+| GET | `/api/v1/targets/{id}/timeline` | — | `{root, events[], by_year, truncated}` |
+| GET | `/api/v1/entities/{type}/{id}/graph` | `?depth=1..3` | shared-graph neighbourhood |
+| GET | `/api/v1/entities/{type}/{id}/timeline` | — | chronological events for one entity |
 
 `IntelResponse`: `{kind, found, entity_type, entity_id, summary, items, notes,
 search_id, source_available}`. When no Telegram source is configured,

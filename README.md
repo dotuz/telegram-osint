@@ -23,8 +23,8 @@ Telegram information and other **public** OSINT sources.
 | 4 | Public Telegram intelligence (user/group/channel/message search) | ✅ done |
 | 5 | IOC extraction (URL/domain/IP/email/hash/CVE/Telegram) | ✅ done |
 | 6 | Username OSINT + source-adapter architecture + confidence engine | ✅ done |
-| 7 | Entity resolution, graph, timeline | ⛏ next |
-| 8 | Background workers (Redis jobs, retries, cancellation) | ☐ |
+| 7 | Entity resolution, graph, timeline | ✅ done |
+| 8 | Background workers (Redis jobs, retries, cancellation) | ⛏ next |
 | 9 | Watchlist / monitoring | ☐ |
 | 10 | Reports (PDF / HTML / JSON) | ☐ |
 | 11 | Web dashboard (Next.js) | ☐ |

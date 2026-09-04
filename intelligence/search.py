@@ -129,6 +129,8 @@ class TelegramIntelService:
             self._fill_message_search(query, limit, out)
         else:
             self._fill_entity(kind, query, ingest, out)
+            if out.found and target_kind is not None:
+                self._link_target(target_kind, query, out)
 
         self._persist_results(search.id, out)
         self._searches.set_status(
@@ -215,6 +217,20 @@ class TelegramIntelService:
         out.found = bool(out.items)
         if not out.items:
             out.notes.append("no matching public messages in the collected corpus for this query")
+
+    def _link_target(self, target_kind: TargetKind, query: str, out: IntelResult) -> None:
+        """Ensure a Target exists for this lookup and link it to the found entity."""
+        from database.repositories import TargetRepository
+        from intelligence.entity_resolution import TargetResolver
+
+        targets = TargetRepository(self.session, self.user_id)
+        target, _ = targets.get_or_create(kind=target_kind, value=query)
+        self.session.flush()
+        if out.entity_type and out.entity_id:
+            TargetResolver(self.session).link(
+                target.id, out.entity_type, out.entity_id, confidence=75
+            )
+        out.summary["target_id"] = target.id
 
     def _persist_results(self, search_id: str, out: IntelResult) -> None:
         results: list[dict] = []

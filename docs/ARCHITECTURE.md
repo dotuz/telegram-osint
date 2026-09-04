@@ -107,6 +107,23 @@ Bios/descriptions get a lighter pass (`enrich_entity_text`) →
 `IocService` (per message, per container, recent). Every IOC keeps its evidence;
 nothing is inferred without a source reference.
 
+## Entity resolution, graph & timeline (Phase 7)
+
+```
+Target (per user)
+   │  TargetResolver.resolve()  → TARGET_IS_ACCOUNT / TARGET_HAS_USERNAME (+ evidence)
+   ▼
+resolved entities ── GraphService.for_target() ─► bounded BFS (depth≤3, node cap)
+                  └─ TimelineService.for_target() ─► events from evidence.observed_at,
+                                                     message.posted_at, relationship.first_seen,
+                                                     account first-observed → sorted, by_year
+```
+
+`merge_entities(keep, drop)` is the only operation that mutates a persisted
+`Evidence` row (repointing `entity_id`), gated by `allow_evidence_repointing()`;
+it also repoints `relationship` and `message` references and collapses the
+resulting self-loops / duplicate edges.
+
 ## Phase 1 implementation notes
 
 - `security/config.py` — single typed settings source (`pydantic-settings`),

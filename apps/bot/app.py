@@ -18,7 +18,7 @@ from telegram.ext import (
 
 from apps.bot.auth import warn_if_open_or_closed
 from apps.bot.errors import on_error
-from apps.bot.handlers import admin, common, telegram_intel, username_osint
+from apps.bot.handlers import admin, common, graph_views, telegram_intel, username_osint
 from apps.bot.handlers.stubs import make_stub_handler
 from apps.bot.router import ALL_COMMANDS, public_command_menu
 from security.config import Settings, get_settings
@@ -67,6 +67,7 @@ def build_application(*, token: str | None = None, settings: Settings | None = N
         application.add_handler(CommandHandler(spec.name, handler))
 
     application.add_handler(CallbackQueryHandler(common.menu_callback, pattern=r"^menu:"))
+    application.add_handler(CallbackQueryHandler(graph_views.intel_callback, pattern=r"^intel:"))
     # Any other /command -> generic "unknown command".
     application.add_handler(MessageHandler(filters.COMMAND, common.unknown_command))
 

@@ -186,6 +186,49 @@ def render_username_osint(
     return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
 
 
+def render_timeline(
+    *, root_label: str, by_year: Mapping[str, Sequence[Mapping[str, object]]], truncated: bool
+) -> BotMessage:
+    if not by_year:
+        return BotMessage(
+            text=f"*Timeline:* {root_label}\n\nNo dated events observed yet.",
+            parse_mode="Markdown",
+            keyboard=BACK_TO_MENU,
+        )
+    lines = [f"*Timeline:* {root_label}", ""]
+    for year in sorted(by_year, key=str):
+        lines.append(f"*{year}*")
+        for ev in list(by_year[year])[:12]:
+            when = str(ev.get("when", ""))[:10]
+            lines.append(f"  {when} — {ev.get('title')}")
+        lines.append("")
+    if truncated:
+        lines.append("_Timeline truncated._")
+    return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+
+def render_graph(
+    *,
+    root_label: str,
+    nodes: Sequence[Mapping[str, object]],
+    edges: Sequence[Mapping[str, object]],
+    truncated: bool,
+) -> BotMessage:
+    lines = [
+        f"*Graph:* {root_label}",
+        f"_{len(nodes)} node(s), {len(edges)} edge(s)_",
+        "",
+    ]
+    for e in list(edges)[:20]:
+        src = str(e.get("source", "")).split(":", 1)[0]
+        tgt = str(e.get("target", "")).split(":", 1)[0]
+        lines.append(f"  {src} —[{e.get('type')} · {e.get('confidence')}%]→ {tgt}")
+    if truncated:
+        lines.append("\n_Graph truncated at the node cap._")
+    lines.append("\n_Open the dashboard for the interactive graph._")
+    return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+
 def render_history(rows: Sequence[Mapping[str, object]]) -> BotMessage:
     if not rows:
         return BotMessage(
