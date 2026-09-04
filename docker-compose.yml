@@ -1,12 +1,14 @@
-# Local development stack. Production uses the same image with externalised
-# secrets and a managed Postgres/Redis.
+# Same image/compose for dev and a single-node production deploy -- set
+# APP_ENV=production (+ APP_DEBUG=false, LOG_JSON=true) in .env to switch:
+# that disables /docs, disables the X-User-Email dev auth shim, and turns on
+# HSTS. See docs/DEPLOYMENT.md.
 name: telegram-osint
 
 x-backend-env: &backend-env
-  APP_ENV: development
-  APP_DEBUG: "true"
-  LOG_LEVEL: INFO
-  LOG_JSON: "false"
+  APP_ENV: ${APP_ENV:-development}
+  APP_DEBUG: ${APP_DEBUG:-true}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_JSON: ${LOG_JSON:-false}
   DATABASE_URL: postgresql+psycopg://osint:osint@db:5432/telegram_osint
   REDIS_URL: redis://redis:6379/0
   SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
@@ -18,6 +20,7 @@ x-backend-env: &backend-env
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: osint
       POSTGRES_PASSWORD: osint
@@ -34,6 +37,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -49,6 +53,7 @@ services:
       dockerfile: docker/Dockerfile
     command: ["migrate"]
     environment: *backend-env
+    restart: "no"  # runs once per `compose up` and exits; never auto-restarted
     depends_on:
       db:
         condition: service_healthy
@@ -59,6 +64,7 @@ services:
       dockerfile: docker/Dockerfile
     command: ["api"]
     environment: *backend-env
+    restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
@@ -78,6 +84,7 @@ services:
       dockerfile: docker/Dockerfile
     command: ["bot"]
     environment: *backend-env
+    restart: unless-stopped
     depends_on:
       api:
         condition: service_started
@@ -90,6 +97,7 @@ services:
       dockerfile: docker/Dockerfile
     command: ["worker"]
     environment: *backend-env
+    restart: unless-stopped
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -100,6 +108,7 @@ services:
     build:
       context: ./apps/dashboard
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
