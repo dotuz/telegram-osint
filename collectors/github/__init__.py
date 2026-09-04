@@ -1,0 +1,1 @@
+"""GitHub public-profile collector."""

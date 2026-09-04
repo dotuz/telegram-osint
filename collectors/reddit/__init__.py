@@ -1,0 +1,1 @@
+"""Reddit public-activity collector."""

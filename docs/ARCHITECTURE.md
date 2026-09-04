@@ -1,0 +1,100 @@
+# Architecture
+
+## Style
+
+**Modular monolith** with enforced module boundaries. One deployable backend
+image runs in three roles (`api`, `bot`, `worker`) selected by the container
+command. Modules communicate through typed interfaces and the database, never by
+reaching into each other's internals, so any module can later be extracted into
+its own service.
+
+## Data flow
+
+```
+Telegram User
+    │  (Bot API updates: commands, callback queries — bot-scoped data only)
+    ▼
+apps/bot ──────────────► apps/api  (Application layer: use-cases, validation)
+                              │
+                 ┌────────────┴────────────┐
+                 ▼                         ▼
+        security (authn/authz)      Job Queue (Redis)
+                                           │
+                                           ▼
+                                     workers/  (consume jobs)
+                                           │
+              ┌────────────────────────────┼────────────────────────────┐
+              ▼                            ▼                            ▼
+   collectors/telegram          collectors/{username,github,     intelligence/
+   (public TG content)           reddit,web}  (public OSINT)      (correlate, score)
+              └────────────────────────────┼────────────────────────────┘
+                                           ▼
+                          normalize → validate → Evidence + entities
+                                           ▼
+                                      database (PostgreSQL)
+                                           │
+              ┌────────────────────────────┼────────────────────────────┐
+              ▼                            ▼                            ▼
+        Search (PG FTS)            intelligence graph/timeline      reports/ (PDF/HTML/JSON)
+                                           ▼
+                                    apps/dashboard (Next.js)
+```
+
+## Module boundaries
+
+| Module | Depends on | Must **not** depend on |
+|--------|-----------|------------------------|
+| `apps/bot` | `apps/api` app-services, `security` | collectors, intelligence internals |
+| `apps/api` | `database.repositories`, `security`, job-queue client | collector implementations |
+| `workers` | `collectors`, `intelligence`, `database` | `apps/bot`, `apps/api` handlers |
+| `collectors/*` | `collectors/common` | `intelligence`, `database.models` (return DTOs) |
+| `intelligence/*` | `database` (read/write via repositories) | `collectors/*` |
+| `reports` | `database.repositories`, `intelligence` read models | collectors |
+| `database` | — | everything else |
+| `security` | `database` (for auth/audit) | `apps/*` handlers |
+
+Collectors return **plain DTOs + evidence**; the worker persists them. This keeps
+each collector independent of the schema and of the intelligence engine.
+
+## Collector interface
+
+Every collector implements (`collectors/common`):
+
+```python
+class Collector(Protocol):
+    name: str
+
+    async def collect(self, request: CollectRequest) -> CollectResult: ...
+    def normalize(self, raw: RawRecords) -> list[NormalizedRecord]: ...
+    def validate(self, records: list[NormalizedRecord]) -> list[NormalizedRecord]: ...
+    async def health_check(self) -> HealthStatus: ...
+```
+
+## Application-layer contract
+
+- Telegram handlers and HTTP handlers **never** run long collection inline. They
+  validate input, enqueue a `Job`, and return immediately with a job id.
+- Every read is scoped to the authenticated principal's workspace. IDs supplied
+  by clients are never trusted for authorization.
+- Every externally-visible claim carries an `Evidence` reference.
+
+## Roles / processes
+
+| Process | Command | Responsibility |
+|---------|---------|----------------|
+| API | `entrypoint.sh api` | HTTP API, dashboard backend, health probes |
+| Bot | `entrypoint.sh bot` | Telegram update loop, command router, job creation |
+| Worker | `entrypoint.sh worker` | Job execution: collect → normalize → validate → store → correlate |
+| Migrate | `entrypoint.sh migrate` | `alembic upgrade head`, then exit |
+
+## Phase 1 implementation notes
+
+- `security/config.py` — single typed settings source (`pydantic-settings`),
+  secrets as `SecretStr`, wildcard-CORS rejected at load, production secret gate.
+- `security/logging.py` — `structlog`, JSON in prod, `request_id`/`job_id` bound
+  via `contextvars`.
+- `database/` — `Base` with naming convention, engine/session with sqlite +
+  Postgres support, `Job` and `AuditLog` operational tables, Alembic wired to
+  application settings.
+- `apps/api` — app factory, request-context middleware, config-driven CORS,
+  `/health` + `/ready`.
