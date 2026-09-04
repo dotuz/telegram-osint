@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy import DateTime, MetaData, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # Explicit naming convention -> deterministic, alembic-friendly constraint names.
@@ -55,3 +55,9 @@ class SoftDeleteMixin:
     @property
     def is_deleted(self) -> bool:
         return self.deleted_at is not None
+
+
+class UUIDPrimaryKey:
+    """String UUID primary key column named ``id``."""
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)

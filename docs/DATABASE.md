@@ -43,24 +43,58 @@ alembic downgrade -1                        # roll back one
 `job.state ∈ {PENDING, RUNNING, COMPLETED, FAILED, CANCELLED}` (CHECK constraint);
 `job.progress ∈ [0,100]` (CHECK constraint).
 
-### Phase 3 (domain — planned)
+### Phase 3 (domain) — migration `0002_domain_schema`
 
-`user`, `target`, `telegram_account`, `telegram_group`, `telegram_channel`,
-`message`, `username`, `external_account`, `domain`, `url`, `ip`, `ioc`,
-`relationship`, `evidence`, `search`, `search_result`, `watchlist`, `report`.
+Three layers:
 
-Planned unique constraints prevent duplicate entities, e.g.
-`telegram_account.telegram_id`, `username(value, platform)`, `domain.name`,
-`ip.address`, `ioc(type, value)`, `message(source_id, message_id)`.
+| Layer | Tables | Scoping |
+|-------|--------|---------|
+| Identity | `user` | — |
+| Per-user investigation | `target`, `search`, `search_result`, `watchlist`, `report` | `user_id` (workspace) |
+| Shared intelligence graph | `telegram_account`, `telegram_group`, `telegram_channel`, `message`, `username`, `external_account`, `domain`, `url`, `ip`, `ioc`, `relationship`, `evidence` | global, deduplicated |
 
-Planned indexes: `username`, `telegram_id`, `message_id`, `source_id`, `domain`,
-`ip`, `ioc.value`, `created_at`, `observed_at`.
+**Unique constraints prevent duplicate entities:**
+
+| Table | Uniqueness |
+|-------|-----------|
+| `user` | `email` |
+| `telegram_account` / `telegram_group` / `telegram_channel` | `telegram_id` |
+| `username` | `(platform, value_normalized)` |
+| `external_account` | `(platform, identifier_normalized)` |
+| `domain` | `name_normalized` |
+| `url` | `url_hash` (sha256 of normalized URL) |
+| `ip` | `address` (normalized) |
+| `ioc` | `(ioc_type, value_normalized)` |
+| `message` | `(source_type, source_id, message_id)` |
+| `relationship` | `(source_type, source_id, target_type, target_id, rel_type)` |
+| `evidence` | `(entity_type, entity_id, field, source, content_hash)` — an *observation* key |
+| `target` / `watchlist` | `(user_id, kind, value_normalized)` |
+
+Every dedup column stores a **normalized** form (`database/normalize.py`);
+`get_or_create_*` in the repositories is the only way to create these rows.
+
+**Indexes** (§17): `username.value_normalized`, `*.telegram_id`,
+`message.message_id`, `message.(source_type, source_id)`, `domain.name_normalized`,
+`ip.address`, `ioc.value_normalized`, `evidence.observed_at`,
+`evidence.collected_at`, plus `created_at` on the per-user tables and
+`relationship` source/target/last_seen.
+
+**Graph model.** `relationship` is a directed edge between any two entities
+(`entity_type` + `entity_id`). `RelationshipRepository.observe()` creates the edge
+or bumps `last_seen` / `observation_count` (keeping `first_seen`, taking the max
+`confidence`) — it never duplicates.
+
+**Job state machine.** `job.state` transitions are guarded by `JobRepository`
+(`PENDING→RUNNING→{COMPLETED,FAILED,CANCELLED}`, `FAILED→PENDING` for retry);
+illegal transitions raise `IllegalJobStateTransition`.
 
 ## Evidence immutability
 
 `evidence` rows are write-once. When observed data changes, a **new** evidence /
 observation row is inserted — historical observations are never overwritten or
-silently mutated.
+silently mutated. This is enforced at runtime by a SQLAlchemy `before_flush`
+listener (`database/models/evidence.py::block_evidence_mutation`): modifying or
+deleting a persisted `Evidence` raises `EvidenceImmutableError`.
 
 ## Retention (Phase 12)
 

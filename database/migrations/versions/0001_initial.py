@@ -41,9 +41,9 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "state in ('PENDING','RUNNING','COMPLETED','FAILED','CANCELLED')",
-            name="ck_job_state_valid",
+            name="state_valid",
         ),
-        sa.CheckConstraint("progress >= 0 and progress <= 100", name="ck_job_progress_range"),
+        sa.CheckConstraint("progress >= 0 and progress <= 100", name="progress_range"),
         sa.PrimaryKeyConstraint("id", name="pk_job"),
     )
     op.create_index("ix_job_state_kind", "job", ["state", "kind"])
