@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api.deps import (
+    Principal,
     current_user,
     db_session,
     get_collector,
@@ -24,7 +25,7 @@ from security.config import get_settings
 router = APIRouter(tags=["watchlist"], prefix="/watchlist")
 
 SessionDep = Annotated[Session, Depends(db_session)]
-UserDep = Annotated[dict, Depends(current_user)]
+UserDep = Annotated[Principal, Depends(current_user)]
 TgCollectorDep = Annotated[Collector | None, Depends(get_collector)]
 UserCollectorDep = Annotated[Collector | None, Depends(get_username_collector)]
 
@@ -34,8 +35,8 @@ class WatchIn(BaseModel):
     sources: list[str] | None = None
 
 
-def _repo(session: Session, email: str) -> WatchlistRepository:
-    return WatchlistRepository(session, resolve_user(session, email).id)
+def _repo(session: Session, principal) -> WatchlistRepository:
+    return WatchlistRepository(session, resolve_user(session, principal).id)
 
 
 def _row(w) -> dict:  # noqa: ANN001
@@ -50,12 +51,12 @@ def _row(w) -> dict:  # noqa: ANN001
 
 @router.get("")
 async def list_watches(session: SessionDep, user: UserDep) -> dict:
-    return {"watchlist": [_row(w) for w in _repo(session, user["email"]).list()]}
+    return {"watchlist": [_row(w) for w in _repo(session, user).list()]}
 
 
 @router.post("")
 async def add_watch(body: WatchIn, session: SessionDep, user: UserDep) -> dict:
-    repo = _repo(session, user["email"])
+    repo = _repo(session, user)
     limit = get_settings().rate_limit_watch_max_targets
     try:
         entry, created = repo.add(
@@ -68,7 +69,7 @@ async def add_watch(body: WatchIn, session: SessionDep, user: UserDep) -> dict:
 
 @router.delete("/{value}")
 async def remove_watch(value: str, session: SessionDep, user: UserDep) -> dict:
-    removed = _repo(session, user["email"]).remove(kind=TargetKind.USERNAME, value=value)
+    removed = _repo(session, user).remove(kind=TargetKind.USERNAME, value=value)
     return {"removed": removed}
 
 
@@ -80,7 +81,7 @@ async def poll_now(
     tg: TgCollectorDep,
     username: UserCollectorDep,
 ) -> dict:
-    entry = _repo(session, user["email"]).get(watch_id)
+    entry = _repo(session, user).get(watch_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="watch not found")
     monitor = WatchMonitor(session, telegram_collector=tg, username_collector=username)

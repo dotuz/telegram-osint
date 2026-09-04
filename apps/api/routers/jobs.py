@@ -8,14 +8,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from apps.api.deps import current_user, db_session
+from apps.api.deps import Principal, current_user, db_session
 from database.models.job import JobState
 from database.repositories import IllegalJobStateTransition, JobRepository
 
 router = APIRouter(tags=["jobs"], prefix="/jobs")
 
 SessionDep = Annotated[Session, Depends(db_session)]
-UserDep = Annotated[dict, Depends(current_user)]
+UserDep = Annotated[Principal, Depends(current_user)]
 
 
 def _row(job) -> dict:  # noqa: ANN001

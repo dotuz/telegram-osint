@@ -27,14 +27,24 @@ class UserRepository(BaseRepository[User]):
         display_name: str | None = None,
         role: Role = Role.ANALYST,
         telegram_user_id: int | None = None,
+        password: str | None = None,
     ) -> User:
+        from security.auth import hash_password
+
         user = User(
             email=email.strip().lower(),
             display_name=display_name,
             role=role.value,
             telegram_user_id=telegram_user_id,
+            hashed_password=hash_password(password) if password else None,
         )
         return self.add(user)
+
+    def set_password(self, user: User, password: str) -> None:
+        from security.auth import hash_password
+
+        user.hashed_password = hash_password(password)
+        self.session.flush()
 
     def get_or_create_for_telegram(
         self, telegram_user_id: int, *, role: Role = Role.ANALYST

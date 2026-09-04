@@ -7,14 +7,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from apps.api.deps import current_user, db_session
+from apps.api.deps import Principal, current_user, db_session
 from database.types import EntityType, IOCType
 from intelligence.ioc.service import IocService
 
 router = APIRouter(tags=["ioc"], prefix="/iocs")
 
 SessionDep = Annotated[Session, Depends(db_session)]
-UserDep = Annotated[dict, Depends(current_user)]
+UserDep = Annotated[Principal, Depends(current_user)]
 
 _CONTAINER_TYPES = {EntityType.TELEGRAM_CHANNEL.value, EntityType.TELEGRAM_GROUP.value}
 

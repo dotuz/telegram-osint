@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.11.0] - 2026-09-04 — Phase 11: Web dashboard + auth
+
+### Added — backend
+- `security/auth.py` — stdlib-only auth: `scrypt` password hashing (salted,
+  `scrypt$n$r$p$salt$hash`) + compact HMAC-SHA256-signed access tokens
+  (`{sub, role, iat, exp}`).
+- `apps/api/routers/auth.py` — `POST /api/v1/auth/login`, `GET /auth/me`,
+  `POST /auth/logout`.
+- `apps/api/deps.py` — `Principal` + `current_user` now resolves a
+  `Authorization: Bearer` token first (role from the token is trusted); the
+  `X-User-Email` shim is kept for dev/tests and **rejected when
+  `APP_ENV=production`**. `require_admin` helper; `resolve_user` accepts a
+  `Principal` / dict / email.
+- `apps/api/routers/admin.py` — `GET /api/v1/stats` (per-user + graph + jobs
+  counts) and `GET /api/v1/audit` (ADMIN only).
+- `apps/api/cli.py` (`python -m apps.api create-user … [--admin]` /
+  `set-password`).
+- `UserRepository.create(password=…)` + `set_password`.
+- 13 new tests (255 total): token/password roundtrip, expiry/tamper/malformed
+  rejection, login + `/me`, bad-credential 401, token-scoped isolation,
+  `/stats` vs `/audit` RBAC, dev-shim still works.
+
+### Added — dashboard (`apps/dashboard/`)
+- Next.js 14 App Router + TypeScript + Tailwind. Typed API client (`lib/api.ts`),
+  auth context + route guard (`lib/auth.tsx`), sidebar nav (ADMIN sees Audit).
+- Pages: overview (stats + source health), targets + target detail
+  (overview / **SVG entity graph** / timeline tabs, "Generate report"), search
+  (user / messages / username), watchlist (add / poll / unwatch), reports
+  (generate + download json/html/pdf), jobs (auto-refresh + cancel), audit
+  (admin), settings.
+- `Dockerfile` (standalone build) + `docker-compose` `dashboard` service.
+
+### Changed
+- All API routers migrated from `user["email"]` to the `Principal` dependency.
+
 ## [0.10.0] - 2026-09-04 — Phase 10: Reports
 
 ### Added

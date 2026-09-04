@@ -21,11 +21,18 @@ Readiness. Checks database + Redis. `200` when all healthy, `503` otherwise.
 { "ready": false, "checks": { "database": "ok", "redis": "error" } }
 ```
 
-## Phase 4 surface (`/api/v1`)
+## Authentication (Phase 11)
 
-Auth is a **dev shim** until Phase 11/12: the caller is identified by the
-`X-User-Email` header (default `analyst@local`); a user row is created on first
-use and every search/result is scoped to it.
+- `POST /api/v1/auth/login` `{email, password}` → `{access_token, expires_in, user}`.
+- Send it as `Authorization: Bearer <token>` on every request. `GET
+  /api/v1/auth/me` returns the current user. Tokens are HMAC-signed, short-lived
+  (`ACCESS_TOKEN_TTL_SECONDS`); refresh-token rotation is Phase 12.
+- Create users with `python -m apps.api create-user <email> [--admin]`.
+- **Dev shim** (kept for local dev + the test suite, **401 in production**):
+  `X-User-Email` identifies/creates a user; `X-User-Role: ADMIN` elevates.
+- `GET /api/v1/stats` — dashboard counts. `GET /api/v1/audit` — audit log (ADMIN).
+
+Every target / search / watchlist / report is scoped to the resolved user.
 
 | Method | Path | Body | Returns |
 |--------|------|------|---------|

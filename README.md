@@ -27,8 +27,8 @@ Telegram information and other **public** OSINT sources.
 | 8 | Background workers (Redis jobs, retries, cancellation) | ✅ done |
 | 9 | Watchlist / monitoring | ✅ done |
 | 10 | Reports (PDF / HTML / JSON) | ✅ done |
-| 11 | Web dashboard (Next.js) | ⛏ next |
-| 12 | Security hardening (RBAC, CSRF, CORS, SSRF, rate limits, IDOR) | ☐ |
+| 11 | Web dashboard (Next.js) + token auth + RBAC | ✅ done |
+| 12 | Security hardening (CSRF, CORS, rate limits, IDOR, refresh tokens) | ⛏ next |
 | 13 | Final QA | ☐ |
 
 ## Architecture (short)
@@ -63,8 +63,17 @@ cp .env.example .env                              # then edit as above
 # Point DATABASE_URL at a local Postgres, or use sqlite for a quick look:
 #   DATABASE_URL=sqlite+pysqlite:///./local.sqlite3
 alembic upgrade head
+python -m apps.api create-user you@example.com --admin    # dashboard login
 make run-api        # or: uvicorn apps.api.main:app --reload
 ```
+
+### Dashboard
+
+```bash
+cd apps/dashboard && npm install && npm run dev   # http://localhost:3000
+```
+
+See [`apps/dashboard/README.md`](apps/dashboard/README.md).
 
 ## Tests
 

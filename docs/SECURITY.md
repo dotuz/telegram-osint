@@ -46,16 +46,21 @@ usernames, memberships, messages, relationships, or timestamps.
 - Frontend never receives secrets; the dashboard talks only to the API.
 - CI runs `gitleaks` on every push/PR.
 
-## AuthN / AuthZ (Phase 12)
+## AuthN / AuthZ
 
-- Dashboard: secure sessions; short-lived access tokens with refresh-token
-  rotation if JWT is used; optional MFA.
-- Bot: only numeric IDs in `TELEGRAM_ALLOWED_USER_IDS` may use commands; admin
-  commands require `TELEGRAM_ADMIN_USER_IDS`.
-- RBAC roles: `USER`, `ANALYST`, `ADMIN`. Authorization is always server-side;
-  frontend-supplied roles are ignored.
-- Every resource is scoped to the caller's workspace. Client-supplied IDs are
-  never trusted → BOLA/IDOR protection with regression tests.
+- **Dashboard / API (Phase 11)**: `scrypt` password hashes (salted); login issues
+  a short-lived HMAC-SHA256-signed access token carrying `{sub, role, exp}`.
+  Role in the token is trusted; the `X-User-Email`/`X-User-Role` dev shim is
+  **refused when `APP_ENV=production`**. Refresh-token rotation, MFA, and
+  server-side revocation are Phase 12.
+- **Bot**: only numeric IDs in `TELEGRAM_ALLOWED_USER_IDS` may use commands;
+  admin commands require `TELEGRAM_ADMIN_USER_IDS`.
+- **RBAC** roles: `USER`, `ANALYST`, `ADMIN`. Authorization is always
+  server-side (`require_admin` on `/audit`, admin-only bot commands); a
+  frontend-supplied role is only honoured through the dev shim, never in prod.
+- Every resource is scoped to the caller's resolved user. Client-supplied IDs
+  are never trusted → BOLA/IDOR protection with regression tests
+  (`test_api_auth_admin.py::test_token_auth_scopes_data_to_the_token_user`).
 
 ## Transport / browser controls (Phase 12)
 

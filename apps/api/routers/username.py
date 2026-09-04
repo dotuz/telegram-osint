@@ -8,14 +8,14 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api.deps import current_user, db_session, get_username_collector, resolve_user
+from apps.api.deps import Principal, current_user, db_session, get_username_collector, resolve_user
 from collectors.common.interfaces import Collector
 from intelligence.username_osint import UsernameOsintService
 
 router = APIRouter(tags=["username-osint"])
 
 SessionDep = Annotated[Session, Depends(db_session)]
-UserDep = Annotated[dict, Depends(current_user)]
+UserDep = Annotated[Principal, Depends(current_user)]
 CollectorDep = Annotated[Collector | None, Depends(get_username_collector)]
 
 
@@ -46,9 +46,7 @@ class UsernameOsintOut(BaseModel):
 async def username_osint(
     body: UsernameQuery, session: SessionDep, user: UserDep, collector: CollectorDep
 ) -> UsernameOsintOut:
-    svc = UsernameOsintService(
-        session, resolve_user(session, user["email"]).id, collector=collector
-    )
+    svc = UsernameOsintService(session, resolve_user(session, user).id, collector=collector)
     result = await svc.run(body.username)
     return UsernameOsintOut(
         username=result.username,

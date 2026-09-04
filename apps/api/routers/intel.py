@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api.deps import current_user, db_session, get_collector, resolve_user
+from apps.api.deps import Principal, current_user, db_session, get_collector, resolve_user
 from collectors.common.interfaces import Collector
 from collectors.common.registry import registry
 from intelligence.search import IntelResult, TelegramIntelService
@@ -16,7 +16,7 @@ from intelligence.search import IntelResult, TelegramIntelService
 router = APIRouter(tags=["telegram-intel"])
 
 SessionDep = Annotated[Session, Depends(db_session)]
-UserDep = Annotated[dict, Depends(current_user)]
+UserDep = Annotated[Principal, Depends(current_user)]
 CollectorDep = Annotated[Collector | None, Depends(get_collector)]
 
 
@@ -40,8 +40,8 @@ class IntelResponse(BaseModel):
     source_available: bool = True
 
 
-def _svc(session: Session, email: str, collector: Collector | None = None) -> TelegramIntelService:
-    user = resolve_user(session, email)
+def _svc(session: Session, principal, collector: Collector | None = None) -> TelegramIntelService:
+    user = resolve_user(session, principal)
     return TelegramIntelService(session, user.id, collector=collector)
 
 
@@ -63,34 +63,34 @@ def _to_response(result: IntelResult) -> IntelResponse:
 async def telegram_user(
     body: Query, session: SessionDep, user: UserDep, collector: CollectorDep
 ) -> IntelResponse:
-    return _to_response(await _svc(session, user["email"], collector).search_user(body.query))
+    return _to_response(await _svc(session, user, collector).search_user(body.query))
 
 
 @router.post("/telegram/group", response_model=IntelResponse)
 async def telegram_group(
     body: Query, session: SessionDep, user: UserDep, collector: CollectorDep
 ) -> IntelResponse:
-    return _to_response(await _svc(session, user["email"], collector).group_intel(body.query))
+    return _to_response(await _svc(session, user, collector).group_intel(body.query))
 
 
 @router.post("/telegram/channel", response_model=IntelResponse)
 async def telegram_channel(
     body: Query, session: SessionDep, user: UserDep, collector: CollectorDep
 ) -> IntelResponse:
-    return _to_response(await _svc(session, user["email"], collector).channel_intel(body.query))
+    return _to_response(await _svc(session, user, collector).channel_intel(body.query))
 
 
 @router.post("/telegram/messages", response_model=IntelResponse)
 async def telegram_messages(
     body: MessageQuery, session: SessionDep, user: UserDep, collector: CollectorDep
 ) -> IntelResponse:
-    svc = _svc(session, user["email"], collector)
+    svc = _svc(session, user, collector)
     return _to_response(await svc.search_messages(body.query, limit=body.limit))
 
 
 @router.get("/searches")
 async def search_history(session: SessionDep, user: UserDep) -> dict:
-    return {"searches": _svc(session, user["email"]).history(limit=50)}
+    return {"searches": _svc(session, user).history(limit=50)}
 
 
 @router.get("/sources/health")

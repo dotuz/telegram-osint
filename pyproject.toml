@@ -40,7 +40,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 # Namespace-style: each top-level dir is its own package tree.
 packages = [
-    "apps", "apps.api", "apps.api.routers", "apps.bot", "apps.bot.handlers", "apps.dashboard",
+    "apps", "apps.api", "apps.api.routers", "apps.bot", "apps.bot.handlers",
     "workers",
     "collectors", "collectors.common", "collectors.telegram", "collectors.username",
     "collectors.github", "collectors.reddit", "collectors.web",

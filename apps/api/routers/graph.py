@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api.deps import current_user, db_session, resolve_user
+from apps.api.deps import Principal, current_user, db_session, resolve_user
 from database.repositories import TargetRepository
 from database.types import TargetKind
 from intelligence.entity_resolution import TargetResolver
@@ -18,7 +18,7 @@ from intelligence.timeline import TimelineService
 router = APIRouter(tags=["graph"])
 
 SessionDep = Annotated[Session, Depends(db_session)]
-UserDep = Annotated[dict, Depends(current_user)]
+UserDep = Annotated[Principal, Depends(current_user)]
 
 
 class CreateTarget(BaseModel):
@@ -35,12 +35,12 @@ class TargetOut(BaseModel):
     resolved_entities: list[str] = []
 
 
-def _targets(session: Session, email: str) -> TargetRepository:
-    return TargetRepository(session, resolve_user(session, email).id)
+def _targets(session: Session, principal) -> TargetRepository:
+    return TargetRepository(session, resolve_user(session, principal).id)
 
 
-def _target_or_404(session: Session, email: str, target_id: str):  # noqa: ANN202
-    t = _targets(session, email).get(target_id)
+def _target_or_404(session: Session, principal, target_id: str):  # noqa: ANN202
+    t = _targets(session, principal).get(target_id)
     if t is None:
         raise HTTPException(status_code=404, detail="target not found")
     return t
@@ -48,7 +48,7 @@ def _target_or_404(session: Session, email: str, target_id: str):  # noqa: ANN20
 
 @router.get("/targets")
 async def list_targets(session: SessionDep, user: UserDep) -> dict:
-    rows = _targets(session, user["email"]).list()
+    rows = _targets(session, user).list()
     return {
         "targets": [{"id": t.id, "kind": t.kind, "value": t.value, "label": t.label} for t in rows]
     }
@@ -61,7 +61,7 @@ async def create_target(body: CreateTarget, session: SessionDep, user: UserDep) 
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"unknown target kind: {body.kind}") from exc
 
-    repo = _targets(session, user["email"])
+    repo = _targets(session, user)
     target, _ = repo.get_or_create(kind=kind, value=body.value, label=body.label)
     session.flush()
     resolution = TargetResolver(session).resolve(target)
@@ -76,7 +76,7 @@ async def create_target(body: CreateTarget, session: SessionDep, user: UserDep) 
 
 @router.get("/targets/{target_id}", response_model=TargetOut)
 async def get_target(target_id: str, session: SessionDep, user: UserDep) -> TargetOut:
-    target = _target_or_404(session, user["email"], target_id)
+    target = _target_or_404(session, user, target_id)
     resolved = TargetResolver(session).resolved_entities(target_id)
     return TargetOut(
         id=target.id,
@@ -94,13 +94,13 @@ async def target_graph(
     user: UserDep,
     depth: int = Query(default=2, ge=1, le=3),
 ) -> dict:
-    _target_or_404(session, user["email"], target_id)
+    _target_or_404(session, user, target_id)
     return GraphService(session).for_target(target_id, depth=depth).as_dict()
 
 
 @router.get("/targets/{target_id}/timeline")
 async def target_timeline(target_id: str, session: SessionDep, user: UserDep) -> dict:
-    _target_or_404(session, user["email"], target_id)
+    _target_or_404(session, user, target_id)
     return TimelineService(session).for_target(target_id).as_dict()
 
 

@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-bg text-slate-200;
+}
+
+.card {
+  @apply rounded-lg border border-border bg-panel p-4;
+}
+.btn {
+  @apply rounded-md border border-border bg-panel px-3 py-1.5 text-sm hover:border-accent disabled:opacity-50;
+}
+.btn-primary {
+  @apply rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50;
+}
+.input {
+  @apply w-full rounded-md border border-border bg-bg px-3 py-1.5 text-sm outline-none focus:border-accent;
+}
+table.data {
+  @apply w-full text-sm;
+}
+table.data th {
+  @apply border-b border-border px-2 py-2 text-left font-medium text-muted;
+}
+table.data td {
+  @apply border-b border-border/60 px-2 py-2 align-top;
+}
+.tag {
+  @apply rounded px-1.5 py-0.5 text-xs font-semibold;
+}

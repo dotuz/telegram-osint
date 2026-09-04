@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.middleware import RequestContextMiddleware
 from apps.api.routers import (
+    auth,
     graph,
     health,
     intel,
@@ -65,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
 
     app.include_router(health.router)
+    app.include_router(auth.router, prefix="/api/v1")
     app.include_router(intel.router, prefix="/api/v1")
     app.include_router(iocs.router, prefix="/api/v1")
     app.include_router(username.router, prefix="/api/v1")
@@ -72,6 +74,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(jobs.router, prefix="/api/v1")
     app.include_router(watchlist.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")
+
+    from apps.api.routers import admin as admin_router
+
+    app.include_router(admin_router.router, prefix="/api/v1")
 
     return app
 

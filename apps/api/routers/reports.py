@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Res
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api.deps import current_user, db_session, resolve_user
+from apps.api.deps import Principal, current_user, db_session, resolve_user
 from database.repositories import ReportRepository, TargetRepository
 from database.types import TargetKind
 from intelligence.entity_resolution import TargetResolver
@@ -20,7 +20,7 @@ from reports.service import generate_report
 router = APIRouter(tags=["reports"], prefix="/reports")
 
 SessionDep = Annotated[Session, Depends(db_session)]
-UserDep = Annotated[dict, Depends(current_user)]
+UserDep = Annotated[Principal, Depends(current_user)]
 
 _MEDIA = {"json": "application/json", "html": "text/html", "pdf": "application/pdf"}
 
@@ -32,8 +32,8 @@ class ReportIn(BaseModel):
     formats: list[str] | None = None
 
 
-def _repo(session: Session, email: str) -> ReportRepository:
-    return ReportRepository(session, resolve_user(session, email).id)
+def _repo(session: Session, principal) -> ReportRepository:
+    return ReportRepository(session, resolve_user(session, principal).id)
 
 
 def _row(r) -> dict:  # noqa: ANN001
@@ -51,12 +51,12 @@ def _row(r) -> dict:  # noqa: ANN001
 
 @router.get("")
 async def list_reports(session: SessionDep, user: UserDep) -> dict:
-    return {"reports": [_row(r) for r in _repo(session, user["email"]).list()]}
+    return {"reports": [_row(r) for r in _repo(session, user).list()]}
 
 
 @router.post("")
 async def create_report(body: ReportIn, session: SessionDep, user: UserDep) -> dict:
-    u = resolve_user(session, user["email"])
+    u = resolve_user(session, user)
     treports = TargetRepository(session, u.id)
 
     if body.target_id:
@@ -80,7 +80,7 @@ async def create_report(body: ReportIn, session: SessionDep, user: UserDep) -> d
 
 @router.get("/{report_id}")
 async def get_report(report_id: str, session: SessionDep, user: UserDep) -> dict:
-    report = _repo(session, user["email"]).get(report_id)
+    report = _repo(session, user).get(report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="report not found")
     row = _row(report)
@@ -95,7 +95,7 @@ def download_report(
     user: UserDep,
     fmt: str = Query(default="json", pattern="^(json|html|pdf)$"),
 ) -> Response:
-    report = _repo(session, user["email"]).get(report_id)
+    report = _repo(session, user).get(report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="report not found")
 
