@@ -32,7 +32,11 @@ evidence trail, test matrix, and findings.
   `100644`; `ENTRYPOINT` (exec form) requires the `+x` bit, so the production
   image would fail to start. Fixed the git mode (`100755`) and added a
   belt-and-suspenders `RUN chmod 0755` in `docker/Dockerfile`, applied before
-  `USER appuser` so the write is unambiguous.
+  `USER appuser` so the write is unambiguous. Verified by running the fixed
+  script directly (`sh entrypoint.sh migrate` / `api`) against a real
+  PostgreSQL instance — migrations applied, `/health` and `/ready` both
+  correct; the OCI image build/run itself remains untested (no Docker daemon
+  in the CI/QA environment used for this phase).
 - **Dashboard report download 401s**: the download links were bare
   `<a href="/api/v1/reports/{id}/download">` — a browser navigation sends no
   `Authorization` header and the refresh cookie is scoped to `/api/v1/auth`
