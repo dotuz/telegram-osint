@@ -111,4 +111,8 @@ docs/            ARCHITECTURE SECURITY THREAT_MODEL DATABASE API DEPLOYMENT DEVE
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) — production deployment, secrets, scaling
 - [API.md](docs/API.md) — HTTP API surface
 - [COLLECTORS.md](docs/COLLECTORS.md) — the collector interface and how to add a source
-- [BOT.md](docs/BOT.md) — Telegram bot setup, commands, authorization model
+- [BOT.md](docs/BOT.md) — Telegram bot setup, commands, authorization model (incl. the public-tier quota)
+
+## License
+
+[MIT](LICENSE)

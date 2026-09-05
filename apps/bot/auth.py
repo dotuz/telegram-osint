@@ -32,6 +32,11 @@ class Principal:
         return self.role is Role.ADMIN
 
     @property
+    def is_public(self) -> bool:
+        """True for a not-allow-listed user let in via ``PUBLIC_BOT_ENABLED``."""
+        return self.role is Role.USER
+
+    @property
     def actor(self) -> str:
         return f"telegram:{self.telegram_id}"
 
@@ -52,7 +57,16 @@ def _allowed_ids(settings: Settings) -> set[int]:
 def warn_if_open_or_closed(settings: Settings | None = None) -> None:
     """Startup sanity check for the allow-list configuration."""
     settings = settings or get_settings()
-    if not _allowed_ids(settings):
+    if _allowed_ids(settings):
+        return
+    if settings.public_bot_enabled:
+        _log.warning(
+            "bot_public_no_allowlist",
+            detail="PUBLIC_BOT_ENABLED=true and no TELEGRAM_ALLOWED_USER_IDS/"
+            "TELEGRAM_ADMIN_USER_IDS set; every Telegram user gets the "
+            "rate-limited public tier and nobody has admin access.",
+        )
+    else:
         _log.warning(
             "bot_allowlist_empty",
             detail="No TELEGRAM_ALLOWED_USER_IDS / TELEGRAM_ADMIN_USER_IDS set; "
@@ -71,6 +85,9 @@ def resolve_principal(telegram_id: int | None, settings: Settings | None = None)
 
     if telegram_id in set(settings.telegram_allowed_user_ids):
         return Principal(telegram_id=telegram_id, role=Role.ANALYST)
+
+    if settings.public_bot_enabled:
+        return Principal(telegram_id=telegram_id, role=Role.USER)
 
     raise AccessDenied(telegram_id, reason="not on allow-list")
 

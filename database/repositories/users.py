@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from database.models.user import User
 from database.repositories.base import BaseRepository
@@ -58,3 +58,26 @@ class UserRepository(BaseRepository[User]):
             role=role,
         )
         return user, True
+
+    def record_referral(self, user: User, *, inviter_telegram_id: int) -> bool:
+        """Set ``user.invited_by_telegram_id`` once, at first contact only.
+
+        Returns ``False`` (no-op) for self-referral or if already recorded --
+        the referrer count this feeds is a one-time credit, not something a
+        user can inflate by re-sending their own link to themselves.
+        """
+        if user.invited_by_telegram_id is not None:
+            return False
+        if inviter_telegram_id == user.telegram_user_id:
+            return False
+        user.invited_by_telegram_id = inviter_telegram_id
+        self.session.flush()
+        return True
+
+    def count_referrals(self, telegram_user_id: int) -> int:
+        stmt = select(func.count()).where(User.invited_by_telegram_id == telegram_user_id)
+        return int(self.session.execute(stmt).scalar() or 0)
+
+    def consume_free_action(self, user: User) -> None:
+        user.free_actions_used += 1
+        self.session.flush()

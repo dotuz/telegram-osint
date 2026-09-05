@@ -36,6 +36,15 @@ os.environ.update(
     RATE_LIMIT_ENABLED="false",
 )
 
+# Never let a real, developer-local .env leak into the test process: any
+# setting not explicitly overridden above (e.g. a new feature flag added
+# after this list was last touched) would otherwise silently pick up
+# whatever is in the repo root's .env file, since Settings reads it by
+# default. Tests must only ever see the hermetic environment above.
+from security.config import Settings  # noqa: E402
+
+Settings.model_config["env_file"] = None
+
 
 @pytest.fixture(autouse=True)
 def _reset_caches() -> Iterator[None]:

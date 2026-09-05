@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.14.0] - 2026-09-05 — Public bot tier, MIT license, public GitHub repo
+
+### Added
+- `PUBLIC_BOT_ENABLED` setting (off by default): when true, any Telegram user
+  not on the allow-list gets `Role.USER` instead of a denial, with a free-tier
+  usage quota instead of the allow-list's unlimited access.
+- Free-action quota (`FREE_OSINT_ACTIONS`, default 3) enforced by
+  `apps/bot/quota.py` via a new `authorized(..., quota=True)` guard flag,
+  applied to `/search`, `/user`, `/group`, `/channel`, `/username`, `/report`
+  (the commands that trigger real OSINT collection). Allow-listed
+  ANALYST/ADMIN users are never subject to it.
+- Referral unlock: once spent, a public user is shown a deep link
+  (`https://t.me/<bot>?start=ref_<telegram_id>`); once `REFERRAL_UNLOCK_COUNT`
+  (default 5) distinct people `/start` the bot through it, the referrer is
+  permanently unlocked. Self-referral and double-recording are rejected.
+  `/start` (`apps/bot/handlers/common.py`) now resolves/creates the user row
+  and captures the referral at first contact — it can only be set once.
+  A paid subscription path is a deliberate non-goal here (needs a payment
+  provider decision first); the bot shows "coming soon" for it.
+- `database/models/user.py`: `free_actions_used`, `invited_by_telegram_id`
+  columns; migration `0004_public_bot_referrals`.
+- `database/repositories/users.py`: `record_referral`, `count_referrals`,
+  `consume_free_action`.
+- `LICENSE` (MIT).
+- Tests: `tests/unit/test_quota.py`, `tests/integration/test_public_bot.py`,
+  4 new cases in `tests/unit/test_bot_auth.py`.
+
+### Fixed
+- **Test isolation gap**: `tests/conftest.py`'s hermetic environment only
+  overrode settings it explicitly listed; any setting *not* in that list
+  (like the three new ones above) silently fell through to whatever is in
+  the repo root's real `.env` file, since `Settings` reads it by default.
+  This surfaced as public-tier bot tests leaking into unrelated "unauthorized
+  user is denied" tests once a real `.env` existed locally. Fixed at the
+  root: conftest now sets `Settings.model_config["env_file"] = None` so the
+  test process never reads `.env` at all, regardless of what settings get
+  added later.
+
+### Changed
+- `docker-compose.yml`: `restart: unless-stopped` on every long-running
+  service; `APP_ENV`/`APP_DEBUG`/`LOG_JSON` now read from `.env` (defaulting
+  to the previous development values) instead of being hardcoded, so a real
+  deployment sets `APP_ENV=production` without editing the compose file.
+- Repository published to GitHub (private, then made public per the
+  operator's request) at the operator's account.
+
 ## [0.13.0] - 2026-09-04 — Phase 13: Final QA, E2E, production readiness
 
 Full-platform QA gate: real PostgreSQL 18 (migrate/downgrade/upgrade round-trip,

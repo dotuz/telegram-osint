@@ -68,6 +68,11 @@ async def _post_init(application: Application) -> None:
         await application.bot.set_my_commands(public_command_menu())
     except Exception as exc:  # noqa: BLE001 - non-fatal
         _log.warning("set_my_commands_failed", error=str(exc))
+    try:
+        me = await application.bot.get_me()
+        application.bot_data["bot_username"] = me.username
+    except Exception as exc:  # noqa: BLE001 - referral links just degrade gracefully
+        _log.warning("get_me_failed", error=str(exc))
 
 
 def build_application(*, token: str | None = None, settings: Settings | None = None) -> Application:

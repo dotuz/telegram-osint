@@ -19,12 +19,36 @@ from apps.bot.views import (
     render_unknown_command,
     render_whoami,
 )
+from database.repositories import UserRepository
+from database.session import session_scope
+from database.types import Role
+
+
+def _referrer_id(context: ContextTypes.DEFAULT_TYPE) -> int | None:
+    args = getattr(context, "args", None) or []
+    if args and args[0].startswith("ref_"):
+        try:
+            return int(args[0][len("ref_") :])
+        except ValueError:
+            return None
+    return None
 
 
 @authorized(action="start")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, principal: Principal) -> None:
     user = update.effective_user
     audit.record(actor=principal.actor, action="start")
+
+    if principal.is_public:
+        # Public tier: resolve/create the row so a referral (if any) is
+        # captured at first contact -- it can only be recorded once.
+        with session_scope() as session:
+            repo = UserRepository(session)
+            row, created = repo.get_or_create_for_telegram(principal.telegram_id, role=Role.USER)
+            referrer = _referrer_id(context)
+            if created and referrer is not None:
+                repo.record_referral(row, inviter_telegram_id=referrer)
+
     await reply(update, render_start(first_name=user.first_name if user else None))
 
 

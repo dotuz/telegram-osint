@@ -20,7 +20,7 @@ def _query(context: ContextTypes.DEFAULT_TYPE) -> str:
     return " ".join(getattr(context, "args", None) or []).strip()
 
 
-@authorized(action="username")
+@authorized(action="username", quota=True)
 async def username_osint(
     update: Update, context: ContextTypes.DEFAULT_TYPE, principal: Principal
 ) -> None:

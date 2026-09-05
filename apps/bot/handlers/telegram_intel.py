@@ -95,28 +95,28 @@ async def _enqueue(
     await reply(update, render_job_queued(job_id, spec.summary if spec else command))
 
 
-@authorized(action="search")
+@authorized(action="search", quota=True)
 async def search_user(
     update: Update, context: ContextTypes.DEFAULT_TYPE, principal: Principal
 ) -> None:
     await _enqueue(update, context, principal, command="search")
 
 
-@authorized(action="user")
+@authorized(action="user", quota=True)
 async def user_alias(
     update: Update, context: ContextTypes.DEFAULT_TYPE, principal: Principal
 ) -> None:
     await _enqueue(update, context, principal, command="user")
 
 
-@authorized(action="group")
+@authorized(action="group", quota=True)
 async def group_intel(
     update: Update, context: ContextTypes.DEFAULT_TYPE, principal: Principal
 ) -> None:
     await _enqueue(update, context, principal, command="group")
 
 
-@authorized(action="channel")
+@authorized(action="channel", quota=True)
 async def channel_intel(
     update: Update, context: ContextTypes.DEFAULT_TYPE, principal: Principal
 ) -> None:

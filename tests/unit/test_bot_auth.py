@@ -62,3 +62,35 @@ def test_empty_allowlist_denies_everyone():
 def test_warn_if_open_or_closed_logs_on_empty(caplog):
     s = _settings(telegram_allowed_user_ids="", telegram_admin_user_ids="")
     warn_if_open_or_closed(s)  # must not raise
+
+
+def test_public_bot_disabled_still_denies_unknown_user():
+    s = _settings(
+        telegram_allowed_user_ids="111", telegram_admin_user_ids="", public_bot_enabled=False
+    )
+    with pytest.raises(AccessDenied):
+        resolve_principal(999, s)
+
+
+def test_public_bot_enabled_admits_unknown_user_as_role_user():
+    s = _settings(
+        telegram_allowed_user_ids="111", telegram_admin_user_ids="", public_bot_enabled=True
+    )
+    p = resolve_principal(999, s)
+    assert p.role is Role.USER
+    assert p.is_public
+    assert not p.is_admin
+
+
+def test_allowlisted_user_is_never_public_even_if_enabled():
+    s = _settings(
+        telegram_allowed_user_ids="111", telegram_admin_user_ids="", public_bot_enabled=True
+    )
+    p = resolve_principal(111, s)
+    assert p.role is Role.ANALYST
+    assert not p.is_public
+
+
+def test_warn_if_open_or_closed_public_mode_logs_distinct_reason(caplog):
+    s = _settings(telegram_allowed_user_ids="", telegram_admin_user_ids="", public_bot_enabled=True)
+    warn_if_open_or_closed(s)  # must not raise

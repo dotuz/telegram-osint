@@ -28,7 +28,7 @@ def _queue(context: ContextTypes.DEFAULT_TYPE):  # noqa: ANN202
     return (getattr(app, "bot_data", None) or {}).get("job_queue")
 
 
-@authorized(action="report")
+@authorized(action="report", quota=True)
 async def report_cmd(
     update: Update, context: ContextTypes.DEFAULT_TYPE, principal: Principal
 ) -> None:

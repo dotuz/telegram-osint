@@ -97,6 +97,14 @@ class Settings(BaseSettings):
     # Per-Telegram-user, per-command sliding window for the bot (0 disables).
     rate_limit_bot_per_minute: int = 20
 
+    # --- Public bot tier ---
+    # Off by default: non-allow-listed Telegram users are denied (see
+    # apps/bot/auth.py). Turn on to let anyone /start the bot as Role.USER,
+    # capped by a free-action quota that a referral chain can lift.
+    public_bot_enabled: bool = False
+    free_osint_actions: int = 3
+    referral_unlock_count: int = 5
+
     # --- Browser security ---
     # State-changing requests whose Origin is set must match an allowed origin.
     enforce_origin_check: bool = True

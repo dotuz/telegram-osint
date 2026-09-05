@@ -17,17 +17,48 @@ webhook with a secret path is preferred (Phase 12).
 
 ## Authorization model
 
-Allow-list only (`apps/bot/auth.py`):
+Allow-list by default (`apps/bot/auth.py`):
 
 | Telegram id in… | Resolved role | Can use |
 |---|---|---|
-| `TELEGRAM_ADMIN_USER_IDS` | `ADMIN` | all commands |
-| `TELEGRAM_ALLOWED_USER_IDS` (not admin) | `ANALYST` | all non-admin commands |
-| neither | — | nothing (generic denial + audit entry) |
+| `TELEGRAM_ADMIN_USER_IDS` | `ADMIN` | all commands, unlimited |
+| `TELEGRAM_ALLOWED_USER_IDS` (not admin) | `ANALYST` | all non-admin commands, unlimited |
+| neither, `PUBLIC_BOT_ENABLED=false` (default) | — | nothing (generic denial + audit entry) |
+| neither, `PUBLIC_BOT_ENABLED=true` | `USER` | all non-admin commands, **free-tier limited** (see below) |
 
-If **no** ids are configured the bot rejects everyone and logs
-`bot_allowlist_empty` at startup. Authorization here is for UX; the API/worker
-layers re-check every resource server-side (Phase 12).
+If **no** ids are configured and `PUBLIC_BOT_ENABLED=false` (the default) the
+bot rejects everyone and logs `bot_allowlist_empty` at startup. Authorization
+here is for UX; the API/worker layers re-check every resource server-side
+(Phase 12).
+
+### Public tier (`PUBLIC_BOT_ENABLED=true`)
+
+Opens the bot to any Telegram user as `Role.USER`, capped by a free-action
+quota so it can't be used to flood the job queue or external OSINT sources
+for free indefinitely:
+
+- `FREE_OSINT_ACTIONS` (default 3) collection actions (`/search`, `/user`,
+  `/group`, `/channel`, `/username`, `/report`) per Telegram user, tracked on
+  `user.free_actions_used`.
+- Once spent, the bot replies with a referral link
+  (`https://t.me/<bot_username>?start=ref_<telegram_id>`). When
+  `REFERRAL_UNLOCK_COUNT` (default 5) **distinct** people `/start` the bot via
+  that link, the referrer is unlocked permanently (the count is computed
+  live from `user.invited_by_telegram_id`, so it never needs resetting and
+  never regresses). Self-referral and re-recording an existing referral are
+  both rejected.
+- A paid "subscribe to skip the limit" path is intentionally **not**
+  implemented yet — it needs a payment provider decision (Telegram Stars is
+  the simplest, no external merchant account) before it can be built for
+  real; the bot currently shows "tez orada" (coming soon) for it.
+- Allow-listed users (`TELEGRAM_ALLOWED_USER_IDS`/`TELEGRAM_ADMIN_USER_IDS`)
+  are **always** unlimited regardless of this switch — add someone there to
+  give them unlimited access without going through the referral flow.
+- The existing per-command bot rate limit (`RATE_LIMIT_BOT_PER_MINUTE`) still
+  applies on top of the quota, for every tier.
+
+See `apps/bot/quota.py`, `database/repositories/users.py`, and
+`tests/integration/test_public_bot.py`.
 
 ## Commands
 

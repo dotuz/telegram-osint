@@ -10,7 +10,7 @@ model just holds the identity and role.
 
 from __future__ import annotations
 
-from sqlalchemy import BigInteger, Boolean, Index, String, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.base import Base, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKey
@@ -30,6 +30,11 @@ class User(Base, UUIDPrimaryKey, TimestampMixin, SoftDeleteMixin):
 
     # Optional link to a Telegram identity (numeric id) for bot<->dashboard mapping.
     telegram_user_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # Public (non-allow-listed) bot tier: free-usage counter + who invited them.
+    # Only meaningful for Role.USER; allow-listed ANALYST/ADMIN never consult these.
+    free_actions_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    invited_by_telegram_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("email", name="uq_user_email"),

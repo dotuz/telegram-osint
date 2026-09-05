@@ -19,7 +19,8 @@ from telegram.ext import ContextTypes
 from apps.bot import audit
 from apps.bot.adapter import reply
 from apps.bot.auth import AccessDenied, Principal, require_admin, resolve_principal
-from apps.bot.views import render_denied, render_error, render_rate_limited
+from apps.bot.quota import check_and_consume, referral_link
+from apps.bot.views import render_denied, render_error, render_quota_exceeded, render_rate_limited
 from security.config import get_settings
 from security.logging import get_logger
 from security.ratelimit import enforce
@@ -31,7 +32,7 @@ PTBHandler = Callable[[Update, ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, N
 
 
 def authorized(
-    *, admin: bool = False, action: str | None = None
+    *, admin: bool = False, action: str | None = None, quota: bool = False
 ) -> Callable[[Handler], PTBHandler]:
     def decorator(fn: Handler) -> PTBHandler:
         act = action or fn.__name__
@@ -72,6 +73,29 @@ def authorized(
                         result="rate_limited",
                     )
                     await reply(update, render_rate_limited())
+                    return
+
+            if quota and principal.is_public:
+                status = check_and_consume(principal.telegram_id)
+                if not status.allowed:
+                    _log.info("bot_quota_exceeded", telegram_id=telegram_id, action=act)
+                    audit.record(
+                        actor=actor, action=act, resource=f"command:{act}", result="quota_exceeded"
+                    )
+                    bot_data = (
+                        getattr(getattr(context, "application", None), "bot_data", None) or {}
+                    )
+                    link = referral_link(bot_data.get("bot_username"), principal.telegram_id)
+                    await reply(
+                        update,
+                        render_quota_exceeded(
+                            used=status.used,
+                            limit=status.limit,
+                            referrals=status.referrals,
+                            required_referrals=status.required_referrals,
+                            link=link,
+                        ),
+                    )
                     return
 
             try:

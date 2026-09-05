@@ -54,3 +54,12 @@ Reconciled against the implementation in Phase 13 (final QA). See
 - **Reverse-proxy deployments** must run uvicorn with `--proxy-headers` and a
   trusted-hosts list, or every client shares one rate-limit IP key. Not
   auto-detected.
+- **Public bot tier** (`PUBLIC_BOT_ENABLED=true`) — any Telegram user, not just
+  an owner-approved allow-list, can now trigger OSINT collection. Mitigated by
+  a per-user free-action quota (`FREE_OSINT_ACTIONS`) plus the existing
+  per-command rate limit (`RATE_LIMIT_BOT_PER_MINUTE`); referral-unlock never
+  grants admin/analyst privileges, only lifts the quota. Off by default —
+  turning it on widens the bot's abuse surface (arbitrary users probing input
+  handling, generating jobs, consuming external-source rate budgets) and is a
+  deliberate operator choice, not a default assumption. Tested in
+  `tests/integration/test_public_bot.py`.

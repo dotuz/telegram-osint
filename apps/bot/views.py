@@ -75,6 +75,23 @@ def render_rate_limited() -> BotMessage:
     return BotMessage(text=GENERIC_RATE_LIMITED)
 
 
+def render_quota_exceeded(
+    *, used: int, limit: int, referrals: int, required_referrals: int, link: str | None
+) -> BotMessage:
+    remaining = max(0, required_referrals - referrals)
+    lines = [
+        f"🔒 Bepul limit tugadi ({used}/{limit} ta bepul OSINT amal ishlatildi).",
+        "",
+        "Cheklovsiz foydalanish uchun:",
+        f"• {required_referrals} ta do'stingizni botga taklif qiling "
+        f"(hozircha {referrals}/{required_referrals}, yana {remaining} kishi kerak)",
+        "• Obuna: tez orada",
+    ]
+    if link:
+        lines += ["", f"Taklif havolangiz:\n{link}"]
+    return BotMessage(text="\n".join(lines), keyboard=BACK_TO_MENU)
+
+
 def render_whoami(*, telegram_id: int, role: str) -> BotMessage:
     return BotMessage(
         text=f"*You*\n\nTelegram ID: `{telegram_id}`\nRole: `{role}`",
