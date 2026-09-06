@@ -16,6 +16,7 @@ Layers:
 from database.models.audit_log import AuditLog
 from database.models.evidence import Evidence, EvidenceImmutableError
 from database.models.identifiers import ExternalAccount, Username
+from database.models.investigation import Investigation, InvestigationObservation
 from database.models.ioc import IOC
 from database.models.job import Job, JobState
 from database.models.message import Message
@@ -38,6 +39,8 @@ __all__ = [
     "Evidence",
     "EvidenceImmutableError",
     "ExternalAccount",
+    "Investigation",
+    "InvestigationObservation",
     "Job",
     "JobState",
     "Message",

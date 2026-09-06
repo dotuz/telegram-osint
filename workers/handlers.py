@@ -113,6 +113,41 @@ async def run_username_osint(ctx: JobContext) -> JobOutcome:
     )
 
 
+@register("investigation")
+async def run_investigation(ctx: JobContext) -> JobOutcome:
+    from apps.bot.intel_views import render_investigation_result
+    from intelligence.investigation import InvestigationService, link_job
+
+    p = ctx.params
+    inv_id = p["investigation_id"]
+    link_job(ctx.session, inv_id, ctx.job.id)
+    ctx.progress(10)
+
+    svc = InvestigationService(
+        ctx.session,
+        p["user_id"],
+        telegram_collector=_TG_COLLECTOR,
+        username_collector=_USERNAME_COLLECTOR,
+    )
+    result = await svc.run(inv_id)
+    ctx.progress(95)
+
+    notification = None
+    chat_id = p.get("chat_id")
+    if chat_id is not None:
+        notification = Notification(chat_id=chat_id, text=render_investigation_result(result).text)
+    return JobOutcome(
+        summary={
+            "investigation": result.public_id,
+            "status": result.status,
+            "counts": result.counts,
+            "confidence": result.confidence,
+            "report_id": result.report_id,
+        },
+        notification=notification,
+    )
+
+
 @register("report_generate")
 async def run_report_generate(ctx: JobContext) -> JobOutcome:
     from reports.service import generate_report

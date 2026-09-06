@@ -29,6 +29,7 @@ from database.repositories.entities import (
     UsernameRepository,
 )
 from database.repositories.evidence import EvidenceRepository
+from database.repositories.investigation_repo import InvestigationRepository
 from database.repositories.investigations import (
     ReportRepository,
     ScopedRepository,
@@ -53,6 +54,7 @@ __all__ = [
     "IOCRepository",
     "IPRepository",
     "IllegalJobStateTransition",
+    "InvestigationRepository",
     "JobRepository",
     "MessageRepository",
     "RefreshTokenRepository",

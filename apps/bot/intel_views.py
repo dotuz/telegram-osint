@@ -6,9 +6,13 @@ Kept separate from ``views.py`` to keep files small. No ``telegram.*``, no I/O.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING
 
 from apps.bot.keyboards import BACK_TO_MENU
 from apps.bot.responses import BotMessage, Button
+
+if TYPE_CHECKING:
+    from intelligence.investigation import InvestigationResult
 
 _MAX_ITEMS = 10
 
@@ -227,6 +231,72 @@ def render_watch_added(*, value: str, count: int, limit: int) -> BotMessage:
         parse_mode="Markdown",
         keyboard=BACK_TO_MENU,
     )
+
+
+def render_investigation_started(public_id: str, target: str) -> BotMessage:
+    return BotMessage(
+        text=(
+            f"🔎 *Investigation started*\n\n"
+            f"Target: `{target}`\n"
+            f"ID: `{public_id}`\n\n"
+            f"Collecting public Telegram intelligence…\n"
+            f"_[1/6] Target normalization_\n"
+            f"_[2/6] Public Telegram footprint_\n"
+            f"_[3/6] Public mentions_\n"
+            f"_[4/6] Public messages_\n"
+            f"_[5/6] Entity correlation_\n"
+            f"_[6/6] Report generation_\n\n"
+            f"I'll send the results here when it finishes."
+        ),
+        parse_mode="Markdown",
+        keyboard=BACK_TO_MENU,
+    )
+
+
+def render_investigation_result(result: InvestigationResult) -> BotMessage:
+    c = result.counts or {}
+    status = result.status
+    conf = result.confidence
+
+    if status != "COMPLETED":
+        return BotMessage(
+            text=(f"❌ Investigation `{result.public_id}` did not complete.\n\n{result.narrative}"),
+            parse_mode="Markdown",
+            keyboard=BACK_TO_MENU,
+        )
+
+    total = c.get("observations", 0)
+    if total == 0 and not c.get("aliases"):
+        body = (
+            f"🔎 *Investigation `{result.public_id}`*\n\n"
+            "No publicly observable Telegram activity was discovered.\n\n"
+            "_This does NOT prove the target has no Telegram activity. Private "
+            "resources and inaccessible historical content cannot be verified._"
+        )
+        return BotMessage(text=body, parse_mode="Markdown", keyboard=BACK_TO_MENU)
+
+    lines = [
+        f"🔎 *Investigation `{result.public_id}`* — {result.narrative}",
+        "",
+        "✓ Target normalized",
+        "✓ Public profile checked",
+        "✓ Public references discovered",
+        "✓ Public message observations processed",
+        "✓ Timeline generated",
+        "✓ Evidence correlated",
+        "",
+        f"Public resources: {c.get('resources', 0)}",
+        f"Message observations: {total}",
+        f"Mentions: {c.get('MENTION', 0)}",
+        f"Replies: {c.get('REPLY', 0)}",
+        f"Likely authored: {c.get('AUTHOR', 0)}",
+        f"Cross-platform aliases: {c.get('aliases', 0)}",
+        f"IOCs: {c.get('iocs', 0)}",
+        f"Overall confidence: {conf if conf is not None else 'NOT OBSERVABLE'}",
+    ]
+    for lim in (result.limitations or [])[:2]:
+        lines.append(f"\n_⚠ {lim}_")
+    return BotMessage(text="\n".join(lines), parse_mode="Markdown", keyboard=BACK_TO_MENU)
 
 
 def render_job_queued(job_id: str, what: str) -> BotMessage:

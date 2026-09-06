@@ -8,8 +8,15 @@ from __future__ import annotations
 from apps.bot.keyboards import BACK_TO_MENU, MAIN_MENU
 from apps.bot.responses import BotMessage, Button
 
-START_TITLE = "Telegram OSINT"
-START_BODY = "Public-data intelligence and research platform."
+START_TITLE = "Telegram Public OSINT Investigator"
+START_BODY = (
+    "Send /investigate @username (or a numeric Telegram ID) and I'll collect the "
+    "target's *publicly observable* Telegram presence — public mentions, public "
+    "messages, replies, references, a timeline, correlated entities and an "
+    "evidence-backed report.\n\n"
+    "_Public data only. This bot never touches private groups, private chats, or "
+    "any account you do not control._"
+)
 
 # Generic, non-leaking failure text shown to users.
 GENERIC_ERROR = "Something went wrong handling that request. Please try again later."

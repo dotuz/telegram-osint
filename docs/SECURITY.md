@@ -2,10 +2,14 @@
 
 ## Purpose and boundary
 
-This is an **OSINT / intelligence** platform. Its power comes from correlation,
-evidence, search, entity resolution, timelines, graph analysis, confidence
-scoring, monitoring, automation, and reporting — **not** from unauthorized
-access.
+This is a **Telegram public-OSINT investigator** (`/investigate @username`).
+Its power comes from correlation, evidence, classified public observations,
+timelines, entity resolution, confidence scoring, and reporting — **not** from
+unauthorized access. When something cannot be retrieved through a legitimate
+public/authorized source it is reported as `NOT OBSERVABLE`; it is never
+invented, and a mention is never presented as authorship (see
+`intelligence/investigation/classifier.py`,
+`intelligence/confidence/engine.py::assert_safe_phrasing`).
 
 ### Never implemented (hard limit)
 

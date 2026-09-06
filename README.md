@@ -1,15 +1,28 @@
-# Telegram OSINT Intelligence Platform
+# Telegram Public OSINT Investigator
 
-Public-data intelligence and research platform. A Telegram bot + backend that lets
-**authorized** users search, correlate, analyze, monitor, and report on **public**
-Telegram information and other **public** OSINT sources.
+Give the bot a Telegram **@username** or **numeric user ID** and it runs an
+**investigation**: it discovers what is *publicly observable* about that
+identifier — public profile data, public channel/group references, public
+messages, mentions, replies, a timeline, correlated cross-platform entities and
+public IOCs — and produces an evidence-backed report. Every finding is tagged
+`OBSERVED` / `INFERRED` / `NOT OBSERVABLE`; a mention is never presented as
+authorship, and a shared username is never presented as a confirmed identity.
 
-> **Scope boundary.** This platform works with (1) data the bot legitimately
+```
+/investigate @example
+   → INV-xxxxxxxx → public footprint → observations → timeline → entities → report
+```
+
+> **Scope boundary.** This tool works with (1) data the bot legitimately
 > receives via the Telegram Bot API, (2) publicly accessible Telegram content,
 > (3) public OSINT sources, and (4) an explicitly authorized operator account
-> where the operator has legally configured one. It **never** performs session/
-> token theft, credential harvesting, OTP interception, account takeover, malware
-> delivery, or scraping of private content. See [`docs/SECURITY.md`](docs/SECURITY.md).
+> where the operator has legally configured one (`TELEGRAM_OPERATOR_*`). It
+> **never** performs session/token theft, credential harvesting, OTP
+> interception, account takeover, malware delivery, or access to private
+> groups, private channels, or private chat history. When something cannot be
+> obtained, it reports `NOT OBSERVABLE` — it does not invent it. See
+> [`docs/SECURITY.md`](docs/SECURITY.md) and
+> [`PHASE_TELEGRAM_OSINT_REFACTOR_REPORT.md`](PHASE_TELEGRAM_OSINT_REFACTOR_REPORT.md).
 
 ---
 
@@ -30,6 +43,12 @@ Telegram information and other **public** OSINT sources.
 | 11 | Web dashboard (Next.js) + token auth + RBAC | ✅ done |
 | 12 | Security hardening (CSRF, CORS, rate limits, IDOR, refresh tokens) | ✅ done |
 | 13 | Final QA: E2E, PostgreSQL, backup/restore, Docker, dashboard build, perf | ✅ done — see [`PHASE_13_FINAL_QA_REPORT.md`](PHASE_13_FINAL_QA_REPORT.md) |
+| 14 | Public bot tier (free-action quota + referral unlock), MIT, public repo | ✅ done |
+| 15 | **Product refactor → Telegram Public OSINT Investigator** (`Investigation` domain, `/investigate`, public-observation model, honesty rails) | ✅ done — see [`PHASE_TELEGRAM_OSINT_REFACTOR_REPORT.md`](PHASE_TELEGRAM_OSINT_REFACTOR_REPORT.md) |
+
+The bot's primary command is now **`/investigate`**. The Phase 4–10 commands
+(`/search`, `/username`, `/watch`, `/report`, …) remain as advanced
+single-purpose tools that the investigation orchestrator reuses internally.
 
 ## Architecture (short)
 

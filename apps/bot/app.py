@@ -22,6 +22,7 @@ from apps.bot.handlers import (
     admin,
     common,
     graph_views,
+    investigate,
     report,
     telegram_intel,
     username_osint,
@@ -39,6 +40,8 @@ _LIVE_HANDLERS = {
     "start": common.start,
     "help": common.help_cmd,
     "whoami": common.whoami,
+    # Primary product command: run a Telegram public-OSINT investigation.
+    "investigate": investigate.investigate_cmd,
     "admin": admin.admin_overview,
     "health": admin.health_cmd,
     # Phase 4: public Telegram intelligence
@@ -91,6 +94,10 @@ def build_application(*, token: str | None = None, settings: Settings | None = N
 
     application.add_handler(CallbackQueryHandler(common.menu_callback, pattern=r"^menu:"))
     application.add_handler(CallbackQueryHandler(graph_views.intel_callback, pattern=r"^intel:"))
+    # Plain text after a bare /investigate -> treated as the target (no-op otherwise).
+    application.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, investigate.handle_target_text)
+    )
     # Any other /command -> generic "unknown command".
     application.add_handler(MessageHandler(filters.COMMAND, common.unknown_command))
 

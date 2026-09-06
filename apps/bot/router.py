@@ -32,10 +32,17 @@ class CommandSpec:
 USER_COMMANDS: tuple[CommandSpec, ...] = (
     CommandSpec("start", "Show the main menu", "/start", phase=2),
     CommandSpec("help", "List available commands", "/help", phase=2),
+    CommandSpec(
+        "investigate",
+        "Investigate a Telegram username or numeric ID (public OSINT)",
+        "/investigate @username | /investigate <telegram_id>",
+        phase=2,
+        long_running=True,
+    ),
     CommandSpec("whoami", "Show your Telegram ID and role", "/whoami", phase=2),
     CommandSpec(
         "search",
-        "Search a Telegram user by @username or numeric ID",
+        "Advanced: single-source Telegram user lookup",
         "/search @username | /search <telegram_id>",
         phase=4,
         long_running=True,

@@ -18,6 +18,7 @@ from apps.api.routers import (
     graph,
     health,
     intel,
+    investigations,
     iocs,
     jobs,
     reports,
@@ -71,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router, prefix="/api/v1")
+    app.include_router(investigations.router, prefix="/api/v1")
     app.include_router(intel.router, prefix="/api/v1")
     app.include_router(iocs.router, prefix="/api/v1")
     app.include_router(username.router, prefix="/api/v1")

@@ -24,9 +24,12 @@ def test_render_start_has_title_body_and_menu():
 
 
 def test_start_never_asks_for_credentials():
+    import re
+
     text = render_start().text.lower()
+    # whole-word check: "footprint"/"presence" etc. must not trip the "otp" term
     for forbidden in ("password", "login code", "otp", "session", "token", "phone number"):
-        assert forbidden not in text
+        assert not re.search(rf"\b{re.escape(forbidden)}\b", text), forbidden
 
 
 def test_render_help_hides_admin_commands_from_non_admin():

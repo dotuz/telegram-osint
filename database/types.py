@@ -136,6 +136,43 @@ class Assertion(enum.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class InvestigationStatus(enum.StrEnum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+    @property
+    def is_terminal(self) -> bool:
+        return self in {
+            InvestigationStatus.COMPLETED,
+            InvestigationStatus.FAILED,
+            InvestigationStatus.CANCELLED,
+        }
+
+
+class ObservationType(enum.StrEnum):
+    """How a public observation relates to the investigation target.
+
+    Never upgraded automatically (a MENTION never becomes an AUTHOR): each is
+    assigned once by the classifier from the evidence actually available.
+    """
+
+    AUTHOR = "AUTHOR"  # the target authored this publicly accessible message
+    MENTION = "MENTION"  # someone else mentioned the target
+    REPLY = "REPLY"  # a public reply associated with the target
+    REFERENCE = "REFERENCE"  # the target is referenced (link / plain text)
+    UNKNOWN = "UNKNOWN"  # association observed but its nature can't be established
+
+
+class ObservationResourceKind(enum.StrEnum):
+    CHANNEL = "channel"
+    GROUP = "group"
+    PROFILE = "profile"
+    WEB = "web"
+
+
 CONFIDENCE_MIN = 0
 CONFIDENCE_MAX = 100
 

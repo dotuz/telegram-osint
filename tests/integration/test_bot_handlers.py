@@ -55,7 +55,8 @@ async def test_start_shows_menu_for_authorized_user(bot_db):
 
     msg.reply_text.assert_awaited_once()
     text = msg.reply_text.call_args.args[0]
-    assert "Telegram OSINT" in text
+    assert "Telegram Public OSINT Investigator" in text
+    assert "/investigate" in text
     assert msg.reply_text.call_args.kwargs["reply_markup"] is not None
 
 

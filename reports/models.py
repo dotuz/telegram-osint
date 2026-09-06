@@ -12,7 +12,7 @@ from datetime import datetime
 
 from database.types import Assertion
 
-# The 15 sections, in order (spec section 15).
+# The 15 legacy dossier sections, in order (original spec section 15).
 SECTION_ORDER: tuple[str, ...] = (
     "executive_summary",
     "target_information",
@@ -31,23 +31,56 @@ SECTION_ORDER: tuple[str, ...] = (
     "limitations",
 )
 
+# The Telegram public-OSINT *investigation* report layout ("REFACTOR" spec §18).
+INVESTIGATION_SECTION_ORDER: tuple[str, ...] = (
+    "executive_summary",
+    "target_information",
+    "public_profile",
+    "observed_public_resources",
+    "public_message_activity",
+    "mentions",
+    "replies",
+    "timeline",
+    "entities",
+    "relationships",
+    "evidence",
+    "confidence",
+    "limitations",
+    "methodology",
+    "audit_information",
+)
+
 SECTION_TITLES: dict[str, str] = {
     "executive_summary": "Executive Summary",
     "target_information": "Target Information",
+    "public_profile": "Public Profile",
     "public_telegram_presence": "Public Telegram Presence",
+    "observed_public_resources": "Observed Public Resources",
     "public_groups": "Public Groups",
     "public_channels": "Public Channels",
     "public_messages": "Public Messages",
+    "public_message_activity": "Public Message Activity",
+    "mentions": "Mentions",
+    "replies": "Replies",
     "username_intelligence": "Username Intelligence",
     "external_osint": "External OSINT",
     "ioc": "Indicators of Compromise",
     "timeline": "Timeline",
     "entity_graph": "Entity Graph",
+    "entities": "Entities",
+    "relationships": "Relationships",
     "evidence": "Evidence",
     "confidence_scores": "Confidence Scores",
+    "confidence": "Confidence",
     "collection_timestamps": "Collection Timestamps",
-    "limitations": "Limitations",
+    "limitations": "Data Visibility Limitations",
+    "methodology": "Methodology",
+    "audit_information": "Audit Information",
 }
+
+_ALL_SECTION_ORDER: tuple[str, ...] = SECTION_ORDER + tuple(
+    k for k in INVESTIGATION_SECTION_ORDER if k not in SECTION_ORDER
+)
 
 
 @dataclass
@@ -92,10 +125,12 @@ class ReportContent:
         return self.sections.setdefault(key, Section(key=key))
 
     def as_dict(self) -> dict:
+        ordered = [k for k in _ALL_SECTION_ORDER if k in self.sections]
+        ordered += [k for k in self.sections if k not in _ALL_SECTION_ORDER]
         return {
             "report_id": self.report_id,
             "title": self.title,
             "target": self.target,
             "generated_at": self.generated_at.isoformat(),
-            "sections": [self.sections[k].as_dict() for k in SECTION_ORDER if k in self.sections],
+            "sections": [self.sections[k].as_dict() for k in ordered],
         }

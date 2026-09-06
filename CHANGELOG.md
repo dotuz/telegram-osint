@@ -1,5 +1,65 @@
 # Changelog
 
+## [0.15.0] - 2026-09-06 — Product refactor: Telegram Public OSINT Investigator
+
+The product direction changes from a generic multi-source OSINT platform to a
+focused **Telegram public-OSINT investigator**: give it a Telegram `@username`
+or numeric id, it runs an *investigation* and returns the target's publicly
+observable footprint + an evidence-backed report. The Phase 1–12 infrastructure
+(security, auth, RBAC, rate limiting, workers, evidence model, confidence
+engine, timeline, reports, dashboard, SSRF guard) is preserved and reused --
+this is a refactor on top of it, not a rewrite. See
+`PHASE_TELEGRAM_OSINT_REFACTOR_REPORT.md`.
+
+### Added
+- **`Investigation` domain model** (`database/models/investigation.py`) + the
+  **public-observation model** `InvestigationObservation`, each observation
+  carrying an `observation_type` (`AUTHOR` / `MENTION` / `REPLY` / `REFERENCE`
+  / `UNKNOWN`) assigned once by the classifier -- a mention is never promoted
+  to authorship. Migration `0005_investigations`.
+- `intelligence/investigation/`: `parse_target` (normalises `@Example` /
+  `example` / `t.me/example` / numeric id; rejects junk, non-Telegram URLs,
+  control chars, over-long input), `classify_observation`, and
+  `InvestigationService` -- the orchestrator that runs the 6-step flow
+  (normalize → public footprint → mentions → messages → correlation → report)
+  by reusing the existing Telegram/username collectors, IOC extraction,
+  timeline and confidence machinery.
+- `InvestigationRepository` (scoped to `user_id` -- BOLA guard).
+- `/investigate` bot command (`apps/bot/handlers/investigate.py`) -- now the
+  bot's primary command, with `quota=True` so it counts against the public
+  free-tier. Bare `/investigate` prompts for the target (next plain-text
+  message). `render_investigation_started` / `render_investigation_result`.
+- `investigation` worker job kind.
+- `reports/investigation_report.py` -- the spec §18 report layout (Executive
+  Summary, Target, Public Profile, Observed Public Resources, Public Message
+  Activity, Mentions, Replies, Timeline, Entities, Relationships, Evidence,
+  Confidence, **Data Visibility Limitations**, Methodology, Audit Information);
+  reuses the JSON/HTML/PDF renderers. `INVESTIGATION_SECTION_ORDER`.
+- `apps/api/routers/investigations.py`: `POST /api/v1/investigations` (create +
+  queue), `GET /api/v1/investigations`, `GET /api/v1/investigations/{id}`,
+  `GET /api/v1/investigations/{id}/report/download?fmt=json|html|pdf` --
+  scoped, rate-limited (`investigate` bucket).
+- Tests: `test_investigation_target.py` (17), `test_observation_classifier.py`
+  (9), `test_investigation_flow.py` (4), `test_investigation_e2e.py` (1).
+  335 tests pass on SQLite, 336 on PostgreSQL 18.
+
+### Changed
+- Bot identity: "Telegram OSINT" → **"Telegram Public OSINT Investigator"**;
+  `/start` and `/help` lead with `/investigate`. `/search` et al. relabelled
+  "advanced".
+- `README.md` reframed around the investigation flow.
+- **Honesty rails**: when no authorized operator account (`TELEGRAM_OPERATOR_*`)
+  is configured, public message/mention discovery is reported as
+  `NOT OBSERVABLE` (the Bot API cannot search public messages) rather than
+  silently returning an empty result that could read as "no activity". Every
+  report carries the limitations section; `assert_safe_phrasing()` guards the
+  narrative.
+
+### Fixed
+- `tests/unit/test_bot_views_router.py::test_start_never_asks_for_credentials`
+  used naive substring matching ("otp" matched inside "footprint"); switched to
+  whole-word matching.
+
 ## [0.14.0] - 2026-09-05 — Public bot tier, MIT license, public GitHub repo
 
 ### Added
